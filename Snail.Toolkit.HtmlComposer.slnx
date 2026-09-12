@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Engine/Engine.csproj" />
+    <Project Path="src/Fonts/Fonts.csproj" />
+    <Project Path="src/Pdf/Pdf.csproj" />
+    <Project Path="src/Pptx/Pptx.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Documents.Tests/Documents.Tests.csproj" />
+    <Project Path="tests/Engine.Tests/Engine.Tests.csproj" />
+    <Project Path="tests/Fonts.Tests/Fonts.Tests.csproj" />
+    <Project Path="tests/Pdf.Tests/Pdf.Tests.csproj" />
+    <Project Path="tests/Pptx.Tests/Pptx.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Documents.Benchmarks/Snail.Toolkit.HtmlComposer.Documents.Benchmarks.csproj" />
+  </Folder>
+</Solution>

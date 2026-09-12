@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>
+      Renders HTML to PowerPoint. Pages laid out by Snail.Toolkit.HtmlComposer.Engine become slides: boxes are
+      shapes, pictures are pictures and every run of text is a text box placed where the engine set it, so a
+      deck carries the layout of the document rather than a picture of it.
+    </Description>
+    <PackageTags>html;pptx;powerpoint;openxml;slides</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Engine\Engine.csproj" />
+    <ProjectReference Include="..\Fonts\Fonts.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fonts\Fonts.csproj" />
+  </ItemGroup>
+
+  <!-- The faces the tests set documents in live in tests/Assets once; each project that needs them links them. -->
+  <ItemGroup>
+    <None Include="..\Assets\*.ttf" Link="Fonts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="..\Assets\PT_Sans-Web-Bold.ttf" LogicalName="Fonts.PT_Sans-Web-Bold.ttf" />
+  </ItemGroup>
+
+</Project>

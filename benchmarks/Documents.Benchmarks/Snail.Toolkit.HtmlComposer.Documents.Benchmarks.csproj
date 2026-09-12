@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="SkiaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pdf\Pdf.csproj" />
+    <ProjectReference Include="..\..\src\Pptx\Pptx.csproj" />
+  </ItemGroup>
+
+  <!-- The same faces and the same documents the corpus tests hold the engine to, so a timing is of a known layout. -->
+  <ItemGroup>
+    <None Include="..\..\tests\Assets\*.ttf" Link="Fonts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\tests\Documents.Tests\Documents\*.html" Link="Documents\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

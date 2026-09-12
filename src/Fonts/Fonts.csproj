@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>
+      Fonts and pictures for the renderers of Snail.Toolkit.HtmlComposer: a library of
+      typefaces loaded from files, streams or embedded resources, the text measurer the engine lays out with,
+      and a picture source that reads data: URIs and files under one folder. Shared by every renderer, so a
+      PowerPoint deck and a PDF are set from the same faces and measured the same way.
+    </Description>
+    <PackageTags>fonts;skia;skiasharp;images;typesetting</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Engine\Engine.csproj" />
+  </ItemGroup>
+
+</Project>

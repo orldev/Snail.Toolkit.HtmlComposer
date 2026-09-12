@@ -1,0 +1,25 @@
+<Project>
+
+  <Import Project="..\Directory.Build.props" />
+
+  <!--
+    A benchmark is a console application that is never packed. Its project file carries the full name, because
+    BenchmarkDotNet finds the project by the name of the assembly it is asked to run, so the names are taken
+    from the file here rather than derived as the packages derive theirs. Documentation is generated as
+    everywhere else, so that an unused using is reported here too; a benchmark carries a summary only where
+    its reason is not obvious, so CS1591 is off.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <PackageId>$(MSBuildProjectName)</PackageId>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+</Project>

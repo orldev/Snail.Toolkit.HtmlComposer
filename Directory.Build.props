@@ -1,0 +1,46 @@
+<Project>
+
+  <!--
+    Project folders are short (Engine, Fonts, Pdf, Pptx) so the solution stays readable in an IDE. The names that
+    reach the outside world are derived here instead: leaving AssemblyName and RootNamespace to their
+    defaults would ship Engine.dll with a root namespace of Engine, which collides with unrelated
+    packages in a consumer's graph and is painful to diagnose.
+  -->
+  <PropertyGroup>
+    <Product>Snail.Toolkit.HtmlComposer</Product>
+    <PackageId>$(Product).$(MSBuildProjectName)</PackageId>
+    <AssemblyName>$(PackageId)</AssemblyName>
+    <RootNamespace>$(PackageId)</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!--
+    One version for every package in the repository. Independent versions only ever apply to leaves:
+    packing turns a ProjectReference into a versioned dependency, so a change in the engine forces the
+    renderers to be republished anyway.
+
+    Stated as a prefix rather than a whole version, so that `dotnet pack -p:VersionSuffix=local` gives
+    0.1.0-local, which is the form the local feed holds. A fixed <Version> makes MSBuild ignore the
+    suffix without a word, and that kind of no-op is noticed only once the wrong file is in the feed.
+  -->
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Authors>Toolkit</Authors>
+    <Copyright>Toolkit</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/orldev/Snail.Toolkit.HtmlComposer</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/orldev/Snail.Toolkit.HtmlComposer</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+</Project>

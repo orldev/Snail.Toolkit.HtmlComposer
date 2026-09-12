@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>
+      Lays HTML and CSS out into pages of positioned boxes, text spans and images, without a browser.
+      Knows nothing about PDF or any other output format: text is measured through ITextMeasurer and
+      images are read through IImageSource, both supplied by the renderer.
+    </Description>
+    <PackageTags>html;css;layout;pagination;typesetting</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="AngleSharp.Css" />
+  </ItemGroup>
+
+</Project>
