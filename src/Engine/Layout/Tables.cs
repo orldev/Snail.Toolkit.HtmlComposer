@@ -20,17 +20,21 @@ internal sealed class Tables(Galley galley)
     public BlockFlow Set(IElement element, Style style, float left, float containingWidth, PendingMarker? pending)
     {
         var box = BorderBox.Of(style, left, containingWidth);
-        List<DeclaredRow> rows = Rows(element, style, isHeader: false);
+        List<DeclaredRow> rows = Rows(element, style);
         List<Band> grid = Grid(rows);
         float[] columns = Columns(grid, box.ContentWidth);
-        List<Flow> children = Tabulate(rows, grid, columns, box.ContentLeft, box.ContentWidth, pending);
+        List<Flow> set = Tabulate(rows, grid, columns, box.ContentLeft, box.ContentWidth, pending);
+        int held = rows.Count(row => row.IsContinued);
+        List<Flow> children = [.. set.Take(set.Count - held)];
 
-        return Galley.Framed(element, style, box, children, containingWidth);
+        BlockFlow table = Galley.Framed(element, style, box, children, containingWidth);
+
+        return held == 0 ? table : table.Continuing([.. set.Skip(set.Count - held)]);
     }
 
     /// <summary>The width a table asks for when it is measured rather than set: its columns end to end.</summary>
     public float Width(IElement element, Style style, float basis) =>
-        Columns(Grid(Rows(element, style, isHeader: false)), basis).Sum();
+        Columns(Grid(Rows(element, style)), basis).Sum();
 
     /// <summary>Sets every row of a table, once each row knows how tall the cells reaching into it have made it.</summary>
     /// <remarks>
@@ -54,8 +58,8 @@ internal sealed class Tables(Galley galley)
                         placement,
                         columns,
                         x,
-                        placement.At + placement.Cell.Span >= columns.Length,
-                        row + placement.Cell.Down >= grid.Count,
+                        RightOf(band, placement),
+                        BelowOf(grid, row, placement),
                         pending)))
                 .ToList())
             .ToList();
@@ -126,7 +130,7 @@ internal sealed class Tables(Galley galley)
         return null;
     }
 
-    private BlockFlow Cell(Placement placement, float[] columns, float x, bool isLastColumn, bool isLastRow, PendingMarker? pending)
+    private BlockFlow Cell(Placement placement, float[] columns, float x, BorderSide right, BorderSide below, PendingMarker? pending)
     {
         galley.Token.ThrowIfCancellationRequested();
 
@@ -134,7 +138,7 @@ internal sealed class Tables(Galley galley)
 
         return galley.Block(
             placement.Cell.Element,
-            style.IsCollapsed ? style with { Border = Shared(style.Border, isLastColumn, isLastRow) } : style,
+            style.IsCollapsed ? style with { Border = Shared(style.Border, right, below) } : style,
             x + Spanned(columns, 0, placement.At),
             Spanned(columns, placement.At, placement.Cell.Span),
             pending);
@@ -144,14 +148,59 @@ internal sealed class Tables(Galley galley)
     /// <remarks>
     /// Where two cells touch, each of them wants a rule and the two are drawn side by side, so a table of
     /// one point lines comes out with two point lines between its cells and one at the edges. A cell gives up
-    /// the side that its neighbour also draws — the right and the bottom — and keeps it only where there is
-    /// no neighbour, at the last column and the last row.
+    /// the side its neighbour also draws — the right and the bottom — and the neighbour draws the one rule.
+    /// <para>
+    /// What matters is that the neighbour really draws it. Giving the side up whenever a neighbour merely
+    /// existed lost the rule altogether in the commonest table there is: cells that declare
+    /// <c>border-bottom</c> and nothing else have no neighbour drawing a top, so every rule but the one under
+    /// the last row simply vanished, and a specification of eight positions came out with no lines between
+    /// them at all. A side is surrendered only to a rule at least as thick as itself, so the heavier of the
+    /// two survives and a cell whose neighbour draws nothing keeps its own.
+    /// </para>
+    /// <para>
+    /// Only the right and the bottom are weighed, which settles every table drawn in one weight. Where the
+    /// two sides of one edge are declared at different thicknesses the heavier is kept but the lighter is not
+    /// suppressed, so that edge comes out drawn twice; resolving it would mean naming the cell above a cell
+    /// that several rows may span, and no document has yet asked for it.
+    /// </para>
     /// </remarks>
-    private static Border Shared(Border border, bool isLastColumn, bool isLastRow) => border with
+    private static Border Shared(Border border, BorderSide right, BorderSide below) => border with
     {
-        Right = isLastColumn ? border.Right : default,
-        Bottom = isLastRow ? border.Bottom : default,
+        Right = right.Width >= border.Right.Width ? default : border.Right,
+        Bottom = below.Width >= border.Bottom.Width ? default : border.Bottom,
     };
+
+    /// <summary>The rule the cell to the right draws where the two meet, or none where no cell stands there.</summary>
+    private static BorderSide RightOf(Band band, Placement placement) =>
+        band.Cells
+            .Where(other => other.At == placement.At + placement.Cell.Span)
+            .Select(other => other.Cell.Style.Border.Left)
+            .FirstOrDefault();
+
+    /// <summary>The heaviest rule the cells beneath draw where they meet this one, or none where the table ends.</summary>
+    /// <remarks>
+    /// A cell spanning rows meets the row below the last one it covers, and a cell spanning columns may meet
+    /// several cells there, each free to declare a rule of its own; the thickest of them is the one that would
+    /// be drawn, so it is the one this cell has to weigh itself against.
+    /// </remarks>
+    private static BorderSide BelowOf(IReadOnlyList<Band> grid, int row, Placement placement)
+    {
+        int next = row + placement.Cell.Down;
+
+        if (next >= grid.Count)
+        {
+            return default;
+        }
+
+        List<BorderSide> tops =
+        [
+            .. grid[next].Cells
+                .Where(other => other.At < placement.At + placement.Cell.Span && other.At + other.Cell.Span > placement.At)
+                .Select(other => other.Cell.Style.Border.Top),
+        ];
+
+        return tops.Count == 0 ? default : tops.MaxBy(side => side.Width);
+    }
 
     private static RowFlow Rank(
         DeclaredRow row,
@@ -286,10 +335,34 @@ internal sealed class Tables(Galley galley)
         return widths;
     }
 
-    private List<DeclaredRow> Rows(IElement parent, Style style, bool isHeader)
+    /// <summary>The rows of a table in the order they are set, with the foot of the table last.</summary>
+    /// <remarks>
+    /// A <c>tfoot</c> is the foot of a table wherever it is written. HTML 4 required it before the body and
+    /// HTML 5 allows it at either end, so the markup's order says nothing about where the rows belong: read
+    /// as written, a foot declared first came out between the heading and the first row of the body, which is
+    /// how a line promising a continuation ended up above the very rows it spoke of. Only the foot is moved —
+    /// every other row keeps the place the markup gave it, including a row of its own <c>th</c> cells, which
+    /// heads the rows it stands above rather than the table.
+    /// </remarks>
+    private List<DeclaredRow> Rows(IElement element, Style style)
     {
         List<DeclaredRow> rows = [];
+        List<DeclaredRow> foot = [];
 
+        Collect(element, style, rows, foot, isHeader: false, isFooter: false, isContinued: false);
+
+        return [.. rows, .. foot];
+    }
+
+    private void Collect(
+        IElement parent,
+        Style style,
+        List<DeclaredRow> rows,
+        List<DeclaredRow> foot,
+        bool isHeader,
+        bool isFooter,
+        bool isContinued)
+    {
         foreach (IElement child in parent.Children)
         {
             Style computed = galley.Compute(child, style);
@@ -303,17 +376,23 @@ internal sealed class Tables(Galley galley)
             {
                 List<DeclaredCell> cells = Cells(child, computed);
 
-                rows.Add(new DeclaredRow(child, computed, isHeader || IsHeading(cells), cells));
+                (isFooter ? foot : rows).Add(
+                    new DeclaredRow(child, computed, isHeader || IsHeading(cells), isContinued, cells));
                 continue;
             }
 
             if (Galley.IsTag(child, "thead") || Galley.IsTag(child, "tbody") || Galley.IsTag(child, "tfoot"))
             {
-                rows.AddRange(Rows(child, computed, isHeader || Galley.IsTag(child, "thead")));
+                Collect(
+                    child,
+                    computed,
+                    rows,
+                    foot,
+                    isHeader || Galley.IsTag(child, "thead"),
+                    isFooter || Galley.IsTag(child, "tfoot"),
+                    isContinued || (Galley.IsTag(child, "tfoot") && child.HasAttribute("continued")));
             }
         }
-
-        return rows;
     }
 
     private List<DeclaredCell> Cells(IElement row, Style style)
@@ -466,6 +545,11 @@ internal sealed class Tables(Galley galley)
     /// <summary>One row of the grid: where its cells sit, and whether a cell from above reaches into it.</summary>
     private sealed record Band(IReadOnlyList<Placement> Cells, bool IsTied);
 
-    /// <summary>One row as the markup declared it, with its cells and whether it heads the table.</summary>
-    private sealed record DeclaredRow(IElement Element, Style Style, bool IsHeader, IReadOnlyList<DeclaredCell> Cells);
+    /// <summary>One row as the markup declared it, with its cells and whether it heads or continues the table.</summary>
+    private sealed record DeclaredRow(
+        IElement Element,
+        Style Style,
+        bool IsHeader,
+        bool IsContinued,
+        IReadOnlyList<DeclaredCell> Cells);
 }

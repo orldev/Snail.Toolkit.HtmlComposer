@@ -271,4 +271,147 @@ public sealed class TableTests
 
     private static string Rows(int count) =>
         string.Concat(Enumerable.Range(1, count).Select(number => $"<tr><td>{number}</td></tr>"));
+
+    /// <summary>
+    /// HTML 4 required <c>tfoot</c> before the body, so a foot written there used to be set between the
+    /// heading and the first row — a line promising a continuation standing above the rows it spoke of.
+    /// </summary>
+    [Theory]
+    [InlineData("<tfoot><tr><td>foot</td></tr></tfoot><tbody><tr><td>one</td></tr><tr><td>two</td></tr></tbody>")]
+    [InlineData("<tbody><tr><td>one</td></tr><tr><td>two</td></tr></tbody><tfoot><tr><td>foot</td></tr></tfoot>")]
+    public void TableFoot_IsSetLastWhereverItIsWritten(string body)
+    {
+        IReadOnlyList<string> texts = Texts($"<table>{body}</table>");
+
+        Assert.Equal(["one", "two", "foot"], texts);
+    }
+
+    /// <summary>A heading keeps the place the markup gave it: only the foot of the table is moved.</summary>
+    [Fact]
+    public void TableHead_StaysWhereItWasWritten()
+    {
+        IReadOnlyList<string> texts = Texts(
+            "<table><thead><tr><th>head</th></tr></thead>"
+            + "<tfoot><tr><td>foot</td></tr></tfoot>"
+            + "<tbody><tr><td>one</td></tr></tbody></table>");
+
+        Assert.Equal(["head", "one", "foot"], texts);
+    }
+
+    /// <summary>A foot that promises a continuation belongs on every page but the one where it stops.</summary>
+    [Fact]
+    public void ContinuedFoot_IsSetOnEveryFragmentButTheLast()
+    {
+        Composition composition = Typeset.Html(
+            $"<table><tfoot continued><tr><td>more</td></tr></tfoot><tbody>{Rows(30)}</tbody></table>");
+
+        Assert.True(composition.Pages.Count > 1);
+        Assert.All(composition.Pages.SkipLast(1), page => Assert.Contains(page.Spans, span => span.Text == "more"));
+        Assert.DoesNotContain(composition.Pages[^1].Spans, span => span.Text == "more");
+    }
+
+    /// <summary>
+    /// A table that is never cut has no continuation to promise. Set as an ordinary foot it said so anyway,
+    /// and a quotation of two positions offered a page that did not exist.
+    /// </summary>
+    [Fact]
+    public void ContinuedFoot_IsNotSetAtAllWhenTheTableIsNotCut()
+    {
+        Composition composition = Typeset.Html(
+            $"<table><tfoot continued><tr><td>more</td></tr></tfoot><tbody>{Rows(3)}</tbody></table>");
+
+        Assert.Single(composition.Pages);
+        Assert.DoesNotContain(composition.Pages[0].Spans, span => span.Text == "more");
+    }
+
+    /// <summary>Without the attribute a foot is the foot of the table: set once, where the table ends.</summary>
+    [Fact]
+    public void PlainFoot_IsSetOnceWhereTheTableEnds()
+    {
+        Composition composition = Typeset.Html(
+            $"<table><tfoot><tr><td>total</td></tr></tfoot><tbody>{Rows(30)}</tbody></table>");
+
+        Assert.True(composition.Pages.Count > 1);
+        Assert.DoesNotContain(composition.Pages[0].Spans, span => span.Text == "total");
+        Assert.Contains(composition.Pages[^1].Spans, span => span.Text == "total");
+    }
+
+    /// <summary>
+    /// Holding back room for a foot taller than the page would leave room for nothing at all. The cut then
+    /// stands without the foot, because a document that goes on unadorned beats one that never ends.
+    /// </summary>
+    [Fact]
+    public void ContinuedFootTallerThanThePage_CostsTheDocumentNothing()
+    {
+        Composition footed = Typeset.Html(
+            $"<table><tfoot continued><tr><td>{Typeset.Numbered(20)}</td></tr></tfoot><tbody>{Rows(30)}</tbody></table>");
+
+        Composition bare = Typeset.Html($"<table><tbody>{Rows(30)}</tbody></table>");
+
+        Assert.True(bare.Pages.Count > 1);
+        Assert.Equal(bare.Pages.Count, footed.Pages.Count);
+    }
+
+    /// <summary>
+    /// A break written on a row was read by the cascade and then never looked at, so a specification that
+    /// wanted five positions on its opening page and eight thereafter had no way to say so.
+    /// </summary>
+    [Theory]
+    [InlineData("break-after:page", "2", "3")]
+    [InlineData("break-before:page", "1", "2")]
+    public void RowThatForcesABreak_EndsThePage(string rule, string last, string first)
+    {
+        string rows = string.Concat(Enumerable.Range(1, 6).Select(n =>
+            $"<tr style='{(n == 2 ? rule : "")}'><td>{n}</td></tr>"));
+
+        Composition composition = Typeset.Html($"<table>{rows}</table>");
+
+        Assert.Equal(2, composition.Pages.Count);
+        Assert.Equal(last, composition.Pages[0].Lines[^1]);
+        Assert.Equal(first, composition.Pages[1].Lines[0]);
+    }
+
+    /// <summary>A break before the very first row would open the document with a blank page.</summary>
+    [Fact]
+    public void BreakBeforeTheFirstRow_DoesNotOpenWithABlankPage()
+    {
+        Composition composition = Typeset.Html(
+            "<table><tr style='break-before:page'><td>one</td></tr><tr><td>two</td></tr></table>");
+
+        Assert.Single(composition.Pages);
+    }
+
+    /// <summary>The heading belongs above the rows a forced break sends down, as it does above any others.</summary>
+    [Fact]
+    public void RowThatForcesABreak_StillCarriesTheHeadingOver()
+    {
+        Composition composition = Typeset.Html(
+            "<table><thead><tr><th>title</th></tr></thead><tbody>"
+            + "<tr><td>one</td></tr><tr style='break-before:page'><td>two</td></tr></tbody></table>");
+
+        Assert.Equal(2, composition.Pages.Count);
+        Assert.All(composition.Pages, page => Assert.Contains(page.Spans, span => span.Text == "title"));
+    }
+
+    /// <summary>
+    /// A specification in a margin layout sits a cell and a row below the page. Pagination looks inside only
+    /// what does not fit, so a break that deep went unread once the rest happened to fit: a table told to
+    /// break after its third row ran all six onto one page.
+    /// </summary>
+    [Fact]
+    public void RowThatForcesABreak_IsFoundInsideACellThatFits()
+    {
+        string inner = string.Concat(Enumerable.Range(1, 6).Select(n =>
+            $"<tr style='{(n == 3 ? "break-after:page" : "")}'><td>{n}</td></tr>"));
+
+        Composition composition = Typeset.Html(
+            $"<table><tr><td style='width:40pt'>marg</td><td style='width:140pt'><table>{inner}</table></td></tr></table>");
+
+        Assert.Equal(2, composition.Pages.Count);
+        Assert.Contains(composition.Pages[0].Spans, span => span.Text == "3");
+        Assert.Contains(composition.Pages[1].Spans, span => span.Text == "4");
+    }
+
+    private static IReadOnlyList<string> Texts(string html) =>
+        [.. Typeset.Html(html).Pages[0].Spans.Select(span => span.Text.Trim()).Where(text => text.Length > 0)];
 }

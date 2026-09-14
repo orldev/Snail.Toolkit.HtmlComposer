@@ -10,6 +10,21 @@ internal abstract class Flow
     public virtual float MarginTop => 0;
 
     public virtual float MarginBottom => 0;
+
+    /// <summary>Whether a page has to end before this, however much room is left.</summary>
+    public virtual bool ForcesBreakBefore => false;
+
+    /// <summary>Whether a page has to end after this, however much room is left.</summary>
+    public virtual bool ForcesBreakAfter => false;
+
+    /// <summary>Whether a page has to end somewhere inside this, however much room is left.</summary>
+    /// <remarks>
+    /// Pagination only looks inside what does not fit, so a forced break deeper down has to be announced all
+    /// the way up or it is never reached. A row announces it as a block does: a specification nested in a
+    /// margin layout sits a cell and a row below the page, and asking only blocks left its last break unread
+    /// — eleven positions came out on a page that was told to hold eight.
+    /// </remarks>
+    public virtual bool HasForcedBreakInside => false;
 }
 
 /// <summary>One line box, placed horizontally and waiting for a page to give it a vertical position.</summary>
@@ -111,6 +126,21 @@ internal sealed class RowFlow(
 
     public bool IsSplitBelow => isSplitBelow;
 
+    /// <summary>Whether the markup asks for a page to end before this row.</summary>
+    /// <remarks>
+    /// A row answers this as a block does, because a table is paginated by the same machinery and asked the
+    /// same questions. Until it did, <c>break-before</c> and <c>break-after</c> written on a <c>tr</c> were
+    /// read by the cascade, carried on the frame and then never looked at — a specification that wanted five
+    /// positions on its opening page and eight thereafter had no way to say so.
+    /// </remarks>
+    public override bool ForcesBreakBefore => !isSplitAbove && frame.BreakBefore == BreakRule.Page;
+
+    /// <inheritdoc cref="ForcesBreakBefore"/>
+    public override bool ForcesBreakAfter => !isSplitBelow && frame.BreakAfter == BreakRule.Page;
+
+    /// <inheritdoc/>
+    public override bool HasForcedBreakInside { get; } = cells.Any(cell => cell.HasForcedBreakInside);
+
     /// <summary>The height of the row itself, which a cell spanning several rows may exceed.</summary>
     public override float Height { get; } = height;
 
@@ -134,6 +164,34 @@ internal sealed record BlockFrame(
     float? MinContentHeight,
     float Radius = 0)
 {
+    /// <summary>Whether every fragment keeps this box's own padding and border instead of one set between them.</summary>
+    /// <remarks>
+    /// CSS <c>box-decoration-break</c>: <c>slice</c> by default, where a box cut by a page boundary is drawn
+    /// as one box opened on the first page and closed on the last, so the cut sides carry neither border nor
+    /// padding. <c>clone</c> makes each fragment whole — which is what a section carried over needs when the
+    /// air above its content is to be found on every page it reaches, not only the one it started on.
+    /// </remarks>
+    public bool ClonesDecoration { get; init; }
+
+    /// <summary>Rows set at the foot of every fragment but the last, where the block goes on overleaf.</summary>
+    /// <remarks>
+    /// These are not children. A foot that says the document continues has nothing to say on the page where
+    /// it stops, so it cannot be part of what the block holds: held as a child it would be set once, at the
+    /// end, which is the one place its sentence is false. It rides on the frame instead, which every fragment
+    /// of a block carries unchanged, and pagination sets it on each fragment that turns out to have a
+    /// continuation.
+    /// </remarks>
+    public IReadOnlyList<Flow> Continued { get; init; } = [];
+
+    /// <summary>What the block sets again at the top of every fragment after the first, where it carries on.</summary>
+    /// <remarks>
+    /// The mirror of <see cref="Continued"/>, and held the same way and for the same reason: a heading that
+    /// reads "continued" has nothing to say on the page where the block starts. A cell keeps this even when
+    /// its own content ran out on the first page, which is what a note in a margin column is — short beside
+    /// something long, and needing to say something else where the long thing goes on.
+    /// </remarks>
+    public IReadOnlyList<Flow> Resumed { get; init; } = [];
+
     public bool IsAnonymous => Element.Length == 0;
 }
 
@@ -165,8 +223,8 @@ internal sealed class BlockFlow : Flow
         IsSplitAbove = isSplitAbove;
         IsSplitBelow = isSplitBelow;
         HasForcedBreakInside = HasForcedBreakAmong(children);
-        Head = isSplitAbove ? 0 : frame.Border.Top.Width + frame.Padding.Top;
-        Foot = isSplitBelow ? 0 : frame.Border.Bottom.Width + frame.Padding.Bottom;
+        Head = isSplitAbove && !frame.ClonesDecoration ? 0 : frame.Border.Top.Width + frame.Padding.Top;
+        Foot = isSplitBelow && !frame.ClonesDecoration ? 0 : frame.Border.Bottom.Width + frame.Padding.Bottom;
 
         float content = Stacking.Height(children);
 
@@ -185,12 +243,8 @@ internal sealed class BlockFlow : Flow
 
     public bool IsSplitBelow { get; }
 
-    /// <summary>Whether a page has to end somewhere inside this block, however much room there is.</summary>
-    /// <remarks>
-    /// Pagination only looks inside a block that does not fit. Without this, a forced break nested in a block
-    /// that fits on the page, which is every <c>break-before: page</c> in a short document, would never be seen.
-    /// </remarks>
-    public bool HasForcedBreakInside { get; }
+    /// <inheritdoc/>
+    public override bool HasForcedBreakInside { get; }
 
     public float Head { get; }
 
@@ -198,14 +252,38 @@ internal sealed class BlockFlow : Flow
 
     public override float Height { get; }
 
-    public bool ForcesBreakBefore =>
-        !IsSplitAbove && (Frame.BreakBefore == BreakRule.Page || Children is [BlockFlow { ForcesBreakBefore: true }, ..]);
+    public override bool ForcesBreakBefore =>
+        !IsSplitAbove && (Frame.BreakBefore == BreakRule.Page || Children is [{ ForcesBreakBefore: true }, ..]);
 
-    public bool ForcesBreakAfter =>
-        !IsSplitBelow && (Frame.BreakAfter == BreakRule.Page || Children is [.., BlockFlow { ForcesBreakAfter: true }]);
+    public override bool ForcesBreakAfter =>
+        !IsSplitBelow && (Frame.BreakAfter == BreakRule.Page || Children is [.., { ForcesBreakAfter: true }]);
 
     public BlockFlow With(IReadOnlyList<Flow> children, float marginTop, float marginBottom, bool isSplitAbove, bool isSplitBelow) =>
         new(Frame, children, marginTop, marginBottom, isSplitAbove, isSplitBelow);
+
+    /// <summary>The same block with a foot to set on every fragment of it but the last.</summary>
+    public BlockFlow Continuing(IReadOnlyList<Flow> foot) =>
+        new(Frame with { Continued = foot }, Children, MarginTop, MarginBottom, IsSplitAbove, IsSplitBelow);
+
+    /// <summary>The same block with a heading to set on every fragment of it but the first.</summary>
+    public BlockFlow Resuming(IReadOnlyList<Flow> heading) =>
+        new(Frame with { Resumed = heading }, Children, MarginTop, MarginBottom, IsSplitAbove, IsSplitBelow);
+
+    /// <summary>The same block opened by the heading it sets wherever it resumes.</summary>
+    /// <remarks>Given to a fragment that follows another, so what it holds reads as a continuation.</remarks>
+    public BlockFlow Headed() =>
+        new(Frame, [.. Frame.Resumed, .. Children], MarginTop, MarginBottom, IsSplitAbove, IsSplitBelow);
+
+    /// <summary>The same block with its continued foot set at the end of what it holds.</summary>
+    /// <remarks>Given to a fragment that has a continuation, once pagination has left the room for it.</remarks>
+    public BlockFlow Footed() =>
+        new(
+            Frame with { Continued = [] },
+            [.. Children, .. Frame.Continued],
+            MarginTop,
+            MarginBottom,
+            IsSplitAbove,
+            IsSplitBelow);
 
     /// <summary>The same box without the height its row lent it, so a cut measures only what it holds.</summary>
     public BlockFlow Bare() =>
@@ -217,14 +295,17 @@ internal sealed class BlockFlow : Flow
 
     private static bool HasForcedBreakAmong(IReadOnlyList<Flow> children)
     {
+        int opening = 0;
+
+        while (opening < children.Count && children[opening] is RowFlow { IsHeader: true })
+        {
+            opening++;
+        }
+
         for (int index = 0; index < children.Count; index++)
         {
-            if (children[index] is not BlockFlow child)
-            {
-                continue;
-            }
-
-            bool isForcedBefore = index > 0 && child.ForcesBreakBefore;
+            Flow child = children[index];
+            bool isForcedBefore = index > opening && child.ForcesBreakBefore;
             bool isForcedAfter = index < children.Count - 1 && child.ForcesBreakAfter;
 
             if (isForcedBefore || isForcedAfter || child.HasForcedBreakInside)

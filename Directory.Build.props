@@ -32,7 +32,7 @@
     suffix without a word, and that kind of no-op is noticed only once the wrong file is in the feed.
   -->
   <PropertyGroup>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.2.0</VersionPrefix>
     <Authors>Toolkit</Authors>
     <Copyright>Toolkit</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

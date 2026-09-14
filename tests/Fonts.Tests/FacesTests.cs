@@ -12,7 +12,7 @@ public sealed class FacesTests
     [Fact]
     public void For_AfterTheLibraryIsDisposed_Refuses()
     {
-        var fonts = new FontLibrary().AddDirectory(Path.Combine(AppContext.BaseDirectory, "Fonts"));
+        FontLibrary fonts = new FontLibrary().AddDirectory(Path.Combine(AppContext.BaseDirectory, "Fonts"));
         using var faces = new Faces(fonts);
 
         fonts.Dispose();

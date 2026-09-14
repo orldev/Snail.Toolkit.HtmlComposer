@@ -9,6 +9,12 @@ namespace Snail.Toolkit.HtmlComposer.Engine.Styling;
 /// has no margin. Browsers keep 8px there to hold text off the window edge, which on paper is the page
 /// margin's job, and keeping both would push every document inwards twice. Headings also avoid a break
 /// after them and inside them, so a title never ends a page alone or splits in two.
+/// <para>
+/// <c>aside[resumed]</c> is taken out of the flow here rather than in the walk that builds the content: the
+/// block it belongs to picks it up by itself and sets it again where it continues overleaf, so in the flow
+/// it has to be nowhere at all. Hiding it by the cascade means an author can put it back with
+/// <c>display: block</c> and see what it holds while drafting.
+/// </para>
 /// </remarks>
 internal static class UserAgentSheet
 {
@@ -19,6 +25,7 @@ internal static class UserAgentSheet
         li { display: list-item }
         head, style, script, title, meta, link, base, template, noscript { display: none }
         [hidden] { display: none }
+        aside[resumed] { display: none }
         h1 { font-size: 2em; margin: 0.67em 0 }
         h2 { font-size: 1.5em; margin: 0.83em 0 }
         h3 { font-size: 1.17em; margin: 1em 0 }

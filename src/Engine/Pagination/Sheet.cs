@@ -56,7 +56,12 @@ internal sealed class Sheet
     }
 
     private static RenderBox BoxOf(BlockFlow block, float top) =>
-        BoxOf(block.Frame, top, block.Height, block.IsSplitAbove, block.IsSplitBelow);
+        BoxOf(
+            block.Frame,
+            top,
+            block.Height,
+            block.IsSplitAbove && !block.Frame.ClonesDecoration,
+            block.IsSplitBelow && !block.Frame.ClonesDecoration);
 
     private static RenderBox BoxOf(LineMark mark, float top) =>
         new(

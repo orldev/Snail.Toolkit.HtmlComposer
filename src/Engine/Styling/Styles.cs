@@ -60,6 +60,7 @@ internal static class Styles
             Height = SizeOf(Declared("height"), size, rootFontSize),
             MaxWidth = SizeOf(Declared("max-width"), size, rootFontSize),
             IsBorderBox = Keyword(Declared("box-sizing")) is "border-box",
+            ClonesDecoration = Keyword(Declared("box-decoration-break")) is "clone",
             BreakBefore = BreakOf(Declared("break-before") ?? Declared("page-break-before")),
             BreakAfter = BreakOf(Declared("break-after") ?? Declared("page-break-after")),
             AvoidsBreakInside = BreakOf(Declared("break-inside") ?? Declared("page-break-inside")) == BreakRule.Avoid,

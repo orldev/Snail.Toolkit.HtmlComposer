@@ -148,6 +148,9 @@ internal sealed record Style
 
     public bool IsBorderBox { get; init; }
 
+    /// <summary>Whether every fragment of a split box keeps its own padding and border, rather than one set between them.</summary>
+    public bool ClonesDecoration { get; init; }
+
     public BreakRule BreakBefore { get; init; }
 
     public BreakRule BreakAfter { get; init; }

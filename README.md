@@ -336,7 +336,12 @@ hyphens · zero-width spaces
 
 `margin` (with collapsing between siblings and through parents) · `padding` · `border` (`solid`, `dashed`,
 `dotted`) · `border-radius` (one radius for all corners) · `background-color` · `width` · `max-width` ·
-`height` · `box-sizing` · `margin: 0 auto`
+`height` · `box-sizing` · `box-decoration-break` · `margin: 0 auto`
+
+A box cut by a page boundary is drawn as one box opened on the first page and closed on the last, so the cut
+sides carry neither border nor padding — that is `box-decoration-break: slice`, the default. Say `clone` and
+every fragment is whole instead, which is what a section carried over needs when the air above its content
+belongs on every page it reaches.
 
 An inline `span` carries its own `background`, `border` and `border-radius`, painted as tall as its own run —
 so a small highlight inside large text stays the size of its letters.
@@ -351,12 +356,50 @@ so a small highlight inside large text stays the size of its letters.
 - **Splitting across pages.** A table too tall for the page is cut between rows, with `thead` repeated on each
   continuation. A single row too tall to fit is cut *across*: every cell is cut at the same height, no rule is
   drawn at the cut, and the grid lines up on both pages.
+- **`tfoot`.** The foot of a table is set last, wherever it is written — HTML 4 required it before the body and
+  HTML 5 allows it at either end, so its place in the markup says nothing about where it belongs. It is set
+  once, where the table ends.
+- **`<tfoot continued>`.** A foot that is set on every page the table crosses *except the last*, for the line
+  that says the document goes on:
+
+  ```html
+  <tfoot continued><tr><td colspan="4">Continued on the next page.</td></tr></tfoot>
+  ```
+
+  A table that fits on one page never shows it, so the sentence is never a lie. Pagination holds back the room
+  for it only once it knows the table is cut, so a table that fits exactly is not split to make space for a
+  promise it was not going to need. Use a plain `tfoot` alongside it for the totals that belong at the end.
+
+### Headings that say "continued"
+
+`<aside resumed>` inside any block is set at the top of every fragment of that block **except the first** —
+the mirror of `<tfoot continued>`:
+
+```html
+<td class="marginal">
+  Specification
+  <aside resumed>Specification · continued</aside>
+</td>
+```
+
+It is what a margin column needs. A short note beside a long table runs out on the first page, and the
+continuation would otherwise carry an empty box exactly where the reader needs telling what they are looking
+at. A block that is never cut does not show it at all.
+
+It is taken out of the flow by the user agent sheet rather than by the layout, so while drafting you can put
+it back and see what it holds:
+
+```css
+aside[resumed] { display: block }
+```
 - **`colspan` / `rowspan`.** A cell spanning columns is measured last and only adds what those columns did not
   already ask for, so a wide heading does not dictate the shape of the table. A page never breaks inside a
   `rowspan`. (Spans are capped at 1000 — beyond that you get a `SpanCapped` note instead of an out-of-memory
   crash.)
-- **`border-collapse: collapse`.** A cell gives up the rule its neighbour also draws, so a grid of 1 pt lines is
-  1 pt thick everywhere instead of 2 pt between cells.
+- **`border-collapse: collapse`.** A cell gives up the rule its neighbour *also draws*, so a grid of 1 pt lines
+  is 1 pt thick everywhere instead of 2 pt between cells. A rule no neighbour draws is kept — cells that
+  declare `border-bottom` and nothing else keep a rule under every row, not just the last. Where both sides of
+  an edge are declared, the thicker survives.
 - **`vertical-align`.** Cells sit on a shared baseline by default, as CSS has it — a 13 pt label beside a 28 pt
   number reads as one line. `top`, `middle` and `bottom` place the cell content in the row instead.
 
@@ -567,8 +610,8 @@ Weigh any change to the cascade, the line breaker or the paginator against these
 ### Packaging
 
 ```bash
-dotnet pack                            # 0.1.0
-dotnet pack -p:VersionSuffix=local     # 0.1.0-local, for a local feed
+dotnet pack                            # 0.2.0
+dotnet pack -p:VersionSuffix=local     # 0.2.0-local, for a local feed
 ```
 
 The version is a *prefix* in `Directory.Build.props`, so a suffix reaches the package. A release is a tag:

@@ -112,7 +112,10 @@ internal sealed class Galley
             style.Orphans,
             style.Widows,
             ContentHeightOf(style, box.Padding, box.Borders),
-            style.BorderRadius);
+            style.BorderRadius)
+        {
+            ClonesDecoration = style.ClonesDecoration,
+        };
 
         return Collapsed(frame, children, style.Margin.Top?.Resolve(containingWidth) ?? 0, style.Margin.Bottom?.Resolve(containingWidth) ?? 0);
     }
@@ -169,8 +172,32 @@ internal sealed class Galley
         var box = BorderBox.Of(style, left, containingWidth);
         PendingMarker? marker = style.Display == Display.ListItem ? new PendingMarker(Numbering.MarkerOf(element, style)) : pending;
         List<Flow> children = Content(element, style, box.ContentLeft, box.ContentWidth, marker);
+        BlockFlow block = Framed(element, style, box, children, containingWidth);
+        List<Flow> resumed = Resumed(element, style, box);
 
-        return Framed(element, style, box, children, containingWidth);
+        return resumed.Count == 0 ? block : block.Resuming(resumed);
+    }
+
+    /// <summary>What the block sets again wherever it carries on, laid out as the block's own content is.</summary>
+    /// <remarks>
+    /// An <c>aside</c> marked <c>resumed</c> is the heading a reader meets on the second page of something
+    /// that began on the first — "continued", the positions this page covers, the name of the table. It is
+    /// hidden in the flow by the user agent sheet and set here instead, so it costs the first page nothing and
+    /// stands at the top of every later one. Only the block's own children are looked at: an aside belongs to
+    /// the block that carries it, and one nested deeper is that block's business, not this one's.
+    /// </remarks>
+    private List<Flow> Resumed(IElement element, Style style, BorderBox box)
+    {
+        List<Flow> resumed = [];
+
+        foreach (IElement child in element.Children.Where(child => IsTag(child, "aside") && child.HasAttribute("resumed")))
+        {
+            Style inner = Compute(child, style) with { Display = Display.Block };
+
+            resumed.Add(Block(child, inner, box.ContentLeft, box.ContentWidth));
+        }
+
+        return resumed;
     }
 
     /// <summary>The computed style of an element under its parent's.</summary>
