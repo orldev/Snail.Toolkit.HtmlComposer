@@ -1,0 +1,358 @@
+#nullable enable
+const Snail.Toolkit.HtmlComposer.Engine.Points.PerInch = 72 -> float
+const Snail.Toolkit.HtmlComposer.Engine.Points.PerPixel = 0.75 -> float
+override Snail.Toolkit.HtmlComposer.Engine.Border.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.BorderSide.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Composition.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Composition.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Composition.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.Edges.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Font.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Font.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Font.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.FontMetrics.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Image.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Image.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Image.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.ImageBox.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.ImageBox.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.ImageBox.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.Note.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Note.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Note.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.Page.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Page.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Page.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.PageSetup.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.PageSetup.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.PageSetup.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.Rect.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.RenderBox.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.RenderBox.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.RenderBox.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.Rgba.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Section.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.Section.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.Section.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Engine.TextSpan.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Engine.TextSpan.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Engine.TextSpan.ToString() -> string!
+Snail.Toolkit.HtmlComposer.Engine.Border
+Snail.Toolkit.HtmlComposer.Engine.Border.Border() -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Border(Snail.Toolkit.HtmlComposer.Engine.BorderSide Top, Snail.Toolkit.HtmlComposer.Engine.BorderSide Right, Snail.Toolkit.HtmlComposer.Engine.BorderSide Bottom, Snail.Toolkit.HtmlComposer.Engine.BorderSide Left) -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Bottom.get -> Snail.Toolkit.HtmlComposer.Engine.BorderSide
+Snail.Toolkit.HtmlComposer.Engine.Border.Bottom.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Deconstruct(out Snail.Toolkit.HtmlComposer.Engine.BorderSide Top, out Snail.Toolkit.HtmlComposer.Engine.BorderSide Right, out Snail.Toolkit.HtmlComposer.Engine.BorderSide Bottom, out Snail.Toolkit.HtmlComposer.Engine.BorderSide Left) -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Equals(Snail.Toolkit.HtmlComposer.Engine.Border other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Border.IsVisible.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.Border.Left.get -> Snail.Toolkit.HtmlComposer.Engine.BorderSide
+Snail.Toolkit.HtmlComposer.Engine.Border.Left.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Right.get -> Snail.Toolkit.HtmlComposer.Engine.BorderSide
+Snail.Toolkit.HtmlComposer.Engine.Border.Right.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Top.get -> Snail.Toolkit.HtmlComposer.Engine.BorderSide
+Snail.Toolkit.HtmlComposer.Engine.Border.Top.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Border.Widths.get -> Snail.Toolkit.HtmlComposer.Engine.Edges
+Snail.Toolkit.HtmlComposer.Engine.BorderSide
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.BorderSide() -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.BorderSide(float Width, Snail.Toolkit.HtmlComposer.Engine.Rgba Color, Snail.Toolkit.HtmlComposer.Engine.BorderStyle Style = Snail.Toolkit.HtmlComposer.Engine.BorderStyle.Solid) -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Color.get -> Snail.Toolkit.HtmlComposer.Engine.Rgba
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Color.init -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Deconstruct(out float Width, out Snail.Toolkit.HtmlComposer.Engine.Rgba Color, out Snail.Toolkit.HtmlComposer.Engine.BorderStyle Style) -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Equals(Snail.Toolkit.HtmlComposer.Engine.BorderSide other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.IsVisible.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Style.get -> Snail.Toolkit.HtmlComposer.Engine.BorderStyle
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Style.init -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Width.get -> float
+Snail.Toolkit.HtmlComposer.Engine.BorderSide.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.BorderStyle
+Snail.Toolkit.HtmlComposer.Engine.BorderStyle.Dashed = 1 -> Snail.Toolkit.HtmlComposer.Engine.BorderStyle
+Snail.Toolkit.HtmlComposer.Engine.BorderStyle.Dotted = 2 -> Snail.Toolkit.HtmlComposer.Engine.BorderStyle
+Snail.Toolkit.HtmlComposer.Engine.BorderStyle.Solid = 0 -> Snail.Toolkit.HtmlComposer.Engine.BorderStyle
+Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.BoxKind.Element = 0 -> Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.BoxKind.Inline = 3 -> Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.BoxKind.Marker = 2 -> Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.BoxKind.Sheet = 1 -> Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.Composition
+Snail.Toolkit.HtmlComposer.Engine.Composition.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Engine.Composition.Composition(System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Page!>! Pages, System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Note!>! Notes) -> void
+Snail.Toolkit.HtmlComposer.Engine.Composition.Deconstruct(out System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Page!>! Pages, out System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Note!>! Notes) -> void
+Snail.Toolkit.HtmlComposer.Engine.Composition.Equals(Snail.Toolkit.HtmlComposer.Engine.Composition? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Composition.Notes.get -> System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Note!>!
+Snail.Toolkit.HtmlComposer.Engine.Composition.Notes.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Composition.Pages.get -> System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Page!>!
+Snail.Toolkit.HtmlComposer.Engine.Composition.Pages.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges
+Snail.Toolkit.HtmlComposer.Engine.Edges.Bottom.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Edges.Bottom.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Deconstruct(out float Top, out float Right, out float Bottom, out float Left) -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Edges() -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Edges(float Top, float Right, float Bottom, float Left) -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Equals(Snail.Toolkit.HtmlComposer.Engine.Edges other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Edges.Horizontal.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Edges.Left.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Edges.Left.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Right.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Edges.Right.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Top.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Edges.Top.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Edges.Vertical.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Font
+Snail.Toolkit.HtmlComposer.Engine.Font.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Font!
+Snail.Toolkit.HtmlComposer.Engine.Font.Deconstruct(out string! Family, out float Size, out int Weight, out bool IsItalic, out float Tracking) -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.Equals(Snail.Toolkit.HtmlComposer.Engine.Font? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Font.Families.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Snail.Toolkit.HtmlComposer.Engine.Font.Family.get -> string!
+Snail.Toolkit.HtmlComposer.Engine.Font.Family.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.Font(string! Family, float Size, int Weight = 400, bool IsItalic = false, float Tracking = 0) -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.IsBold.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.Font.IsItalic.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.Font.IsItalic.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.Size.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Font.Size.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.Tracking.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Font.Tracking.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Font.Weight.get -> int
+Snail.Toolkit.HtmlComposer.Engine.Font.Weight.init -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Ascent.get -> float
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Ascent.init -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Deconstruct(out float Ascent, out float Descent, out float LineGap) -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Descent.get -> float
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Descent.init -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Equals(Snail.Toolkit.HtmlComposer.Engine.FontMetrics other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.FontMetrics() -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.FontMetrics(float Ascent, float Descent, float LineGap) -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.LineGap.get -> float
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.LineGap.init -> void
+Snail.Toolkit.HtmlComposer.Engine.FontMetrics.NormalLineHeight.get -> float
+Snail.Toolkit.HtmlComposer.Engine.IImageSource
+Snail.Toolkit.HtmlComposer.Engine.IImageSource.Load(string! source) -> Snail.Toolkit.HtmlComposer.Engine.Image?
+Snail.Toolkit.HtmlComposer.Engine.Image
+Snail.Toolkit.HtmlComposer.Engine.Image.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Image!
+Snail.Toolkit.HtmlComposer.Engine.Image.Content.get -> byte[]!
+Snail.Toolkit.HtmlComposer.Engine.Image.Content.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Image.Deconstruct(out byte[]! Content, out int Width, out int Height) -> void
+Snail.Toolkit.HtmlComposer.Engine.Image.Equals(Snail.Toolkit.HtmlComposer.Engine.Image? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Image.Height.get -> int
+Snail.Toolkit.HtmlComposer.Engine.Image.Height.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Image.Image(byte[]! Content, int Width, int Height) -> void
+Snail.Toolkit.HtmlComposer.Engine.Image.Width.get -> int
+Snail.Toolkit.HtmlComposer.Engine.Image.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.ImageBox
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.ImageBox!
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Bounds.get -> Snail.Toolkit.HtmlComposer.Engine.Rect
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Bounds.init -> void
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Deconstruct(out Snail.Toolkit.HtmlComposer.Engine.Rect Bounds, out Snail.Toolkit.HtmlComposer.Engine.Image! Image, out Snail.Toolkit.HtmlComposer.Engine.Rect? Source) -> void
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Equals(Snail.Toolkit.HtmlComposer.Engine.ImageBox? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Image.get -> Snail.Toolkit.HtmlComposer.Engine.Image!
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Image.init -> void
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.ImageBox(Snail.Toolkit.HtmlComposer.Engine.Rect Bounds, Snail.Toolkit.HtmlComposer.Engine.Image! Image, Snail.Toolkit.HtmlComposer.Engine.Rect? Source = null) -> void
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Source.get -> Snail.Toolkit.HtmlComposer.Engine.Rect?
+Snail.Toolkit.HtmlComposer.Engine.ImageBox.Source.init -> void
+Snail.Toolkit.HtmlComposer.Engine.ITextMeasurer
+Snail.Toolkit.HtmlComposer.Engine.ITextMeasurer.Measure(string! text, Snail.Toolkit.HtmlComposer.Engine.Font! font) -> float
+Snail.Toolkit.HtmlComposer.Engine.ITextMeasurer.MetricsOf(Snail.Toolkit.HtmlComposer.Engine.Font! font) -> Snail.Toolkit.HtmlComposer.Engine.FontMetrics
+Snail.Toolkit.HtmlComposer.Engine.Note
+Snail.Toolkit.HtmlComposer.Engine.Note.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Note!
+Snail.Toolkit.HtmlComposer.Engine.Note.Deconstruct(out Snail.Toolkit.HtmlComposer.Engine.NoteKind Kind, out string? Subject, out string! Text) -> void
+Snail.Toolkit.HtmlComposer.Engine.Note.Equals(Snail.Toolkit.HtmlComposer.Engine.Note? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Note.Kind.get -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.Note.Kind.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Note.Note(Snail.Toolkit.HtmlComposer.Engine.NoteKind Kind, string? Subject, string! Text) -> void
+Snail.Toolkit.HtmlComposer.Engine.Note.Subject.get -> string?
+Snail.Toolkit.HtmlComposer.Engine.Note.Subject.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Note.Text.get -> string!
+Snail.Toolkit.HtmlComposer.Engine.Note.Text.init -> void
+Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.BoldSubstituted = 2 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.CffOutlines = 3 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.FamilySubstituted = 1 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.MissingGlyph = 4 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.MissingPicture = 0 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.NoFonts = 5 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.NoteKind.SpanCapped = 6 -> Snail.Toolkit.HtmlComposer.Engine.NoteKind
+Snail.Toolkit.HtmlComposer.Engine.Page
+Snail.Toolkit.HtmlComposer.Engine.Page.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Page!
+Snail.Toolkit.HtmlComposer.Engine.Page.Boxes.get -> System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.RenderBox!>!
+Snail.Toolkit.HtmlComposer.Engine.Page.Boxes.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Deconstruct(out int Number, out float Width, out float Height, out System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.RenderBox!>! Boxes, out System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.ImageBox!>! Images, out System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.TextSpan!>! Spans) -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Equals(Snail.Toolkit.HtmlComposer.Engine.Page? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Page.Height.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Page.Height.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Images.get -> System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.ImageBox!>!
+Snail.Toolkit.HtmlComposer.Engine.Page.Images.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Number.get -> int
+Snail.Toolkit.HtmlComposer.Engine.Page.Number.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Page(int Number, float Width, float Height, System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.RenderBox!>! Boxes, System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.ImageBox!>! Images, System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.TextSpan!>! Spans) -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Spans.get -> System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.TextSpan!>!
+Snail.Toolkit.HtmlComposer.Engine.Page.Spans.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Page.Width.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Page.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Background.get -> Snail.Toolkit.HtmlComposer.Engine.Rgba?
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Background.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Content.get -> Snail.Toolkit.HtmlComposer.Engine.Rect
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Deconstruct(out float Width, out float Height, out Snail.Toolkit.HtmlComposer.Engine.Edges Margins) -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Equals(Snail.Toolkit.HtmlComposer.Engine.PageSetup? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Footer.get -> string?
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Footer.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Header.get -> string?
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Header.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Height.get -> float
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Height.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Landscape() -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Margins.get -> Snail.Toolkit.HtmlComposer.Engine.Edges
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Margins.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.PageSetup(float Width, float Height, Snail.Toolkit.HtmlComposer.Engine.Edges Margins) -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Side.get -> string?
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Side.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.SideAt.get -> Snail.Toolkit.HtmlComposer.Engine.PageSide
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.SideAt.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Width.get -> float
+Snail.Toolkit.HtmlComposer.Engine.PageSetup.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.PageSide
+Snail.Toolkit.HtmlComposer.Engine.PageSide.Left = 0 -> Snail.Toolkit.HtmlComposer.Engine.PageSide
+Snail.Toolkit.HtmlComposer.Engine.PageSide.Right = 1 -> Snail.Toolkit.HtmlComposer.Engine.PageSide
+Snail.Toolkit.HtmlComposer.Engine.Points
+Snail.Toolkit.HtmlComposer.Engine.Rect
+Snail.Toolkit.HtmlComposer.Engine.Rect.Bottom.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.Deconstruct(out float X, out float Y, out float Width, out float Height) -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.Equals(Snail.Toolkit.HtmlComposer.Engine.Rect other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Rect.Height.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.Height.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.Rect() -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.Rect(float X, float Y, float Width, float Height) -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.Right.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.Width.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.X.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.X.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rect.Y.get -> float
+Snail.Toolkit.HtmlComposer.Engine.Rect.Y.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.RenderBox!
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Background.get -> Snail.Toolkit.HtmlComposer.Engine.Rgba?
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Background.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Border.get -> Snail.Toolkit.HtmlComposer.Engine.Border
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Border.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Bounds.get -> Snail.Toolkit.HtmlComposer.Engine.Rect
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Bounds.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Deconstruct(out Snail.Toolkit.HtmlComposer.Engine.BoxKind Kind, out Snail.Toolkit.HtmlComposer.Engine.Rect Bounds, out Snail.Toolkit.HtmlComposer.Engine.Rgba? Background, out Snail.Toolkit.HtmlComposer.Engine.Border Border, out bool IsSplitAbove, out bool IsSplitBelow, out float Radius, out string? Element) -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Element.get -> string?
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Element.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Equals(Snail.Toolkit.HtmlComposer.Engine.RenderBox? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.IsPainted.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.IsSplitAbove.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.IsSplitAbove.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.IsSplitBelow.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.IsSplitBelow.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Kind.get -> Snail.Toolkit.HtmlComposer.Engine.BoxKind
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Kind.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Radius.get -> float
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.Radius.init -> void
+Snail.Toolkit.HtmlComposer.Engine.RenderBox.RenderBox(Snail.Toolkit.HtmlComposer.Engine.BoxKind Kind, Snail.Toolkit.HtmlComposer.Engine.Rect Bounds, Snail.Toolkit.HtmlComposer.Engine.Rgba? Background, Snail.Toolkit.HtmlComposer.Engine.Border Border, bool IsSplitAbove = false, bool IsSplitBelow = false, float Radius = 0, string? Element = null) -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba
+Snail.Toolkit.HtmlComposer.Engine.Rgba.A.get -> byte
+Snail.Toolkit.HtmlComposer.Engine.Rgba.A.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.B.get -> byte
+Snail.Toolkit.HtmlComposer.Engine.Rgba.B.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.Deconstruct(out byte R, out byte G, out byte B, out byte A) -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.Equals(Snail.Toolkit.HtmlComposer.Engine.Rgba other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Rgba.G.get -> byte
+Snail.Toolkit.HtmlComposer.Engine.Rgba.G.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.IsVisible.get -> bool
+Snail.Toolkit.HtmlComposer.Engine.Rgba.R.get -> byte
+Snail.Toolkit.HtmlComposer.Engine.Rgba.R.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.Rgba() -> void
+Snail.Toolkit.HtmlComposer.Engine.Rgba.Rgba(byte R, byte G, byte B, byte A = 255) -> void
+Snail.Toolkit.HtmlComposer.Engine.Section
+Snail.Toolkit.HtmlComposer.Engine.Section.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.Section!
+Snail.Toolkit.HtmlComposer.Engine.Section.Deconstruct(out string! Html, out Snail.Toolkit.HtmlComposer.Engine.PageSetup! Setup) -> void
+Snail.Toolkit.HtmlComposer.Engine.Section.Equals(Snail.Toolkit.HtmlComposer.Engine.Section? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.Section.Html.get -> string!
+Snail.Toolkit.HtmlComposer.Engine.Section.Html.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Section.Section(string! Html, Snail.Toolkit.HtmlComposer.Engine.PageSetup! Setup) -> void
+Snail.Toolkit.HtmlComposer.Engine.Section.Setup.get -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+Snail.Toolkit.HtmlComposer.Engine.Section.Setup.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextDecoration
+Snail.Toolkit.HtmlComposer.Engine.TextDecoration.LineThrough = 2 -> Snail.Toolkit.HtmlComposer.Engine.TextDecoration
+Snail.Toolkit.HtmlComposer.Engine.TextDecoration.None = 0 -> Snail.Toolkit.HtmlComposer.Engine.TextDecoration
+Snail.Toolkit.HtmlComposer.Engine.TextDecoration.Underline = 1 -> Snail.Toolkit.HtmlComposer.Engine.TextDecoration
+Snail.Toolkit.HtmlComposer.Engine.TextSpan
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.<Clone>$() -> Snail.Toolkit.HtmlComposer.Engine.TextSpan!
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Baseline.get -> float
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Baseline.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Color.get -> Snail.Toolkit.HtmlComposer.Engine.Rgba
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Color.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Deconstruct(out string! Text, out float X, out float Baseline, out float Width, out Snail.Toolkit.HtmlComposer.Engine.Font! Font, out Snail.Toolkit.HtmlComposer.Engine.Rgba Color, out Snail.Toolkit.HtmlComposer.Engine.TextDecoration Decoration) -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Decoration.get -> Snail.Toolkit.HtmlComposer.Engine.TextDecoration
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Decoration.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Equals(Snail.Toolkit.HtmlComposer.Engine.TextSpan? other) -> bool
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Font.get -> Snail.Toolkit.HtmlComposer.Engine.Font!
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Font.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Text.get -> string!
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Text.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.TextSpan(string! Text, float X, float Baseline, float Width, Snail.Toolkit.HtmlComposer.Engine.Font! Font, Snail.Toolkit.HtmlComposer.Engine.Rgba Color, Snail.Toolkit.HtmlComposer.Engine.TextDecoration Decoration = Snail.Toolkit.HtmlComposer.Engine.TextDecoration.None) -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Width.get -> float
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.Width.init -> void
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.X.get -> float
+Snail.Toolkit.HtmlComposer.Engine.TextSpan.X.init -> void
+Snail.Toolkit.HtmlComposer.Engine.Typesetter
+Snail.Toolkit.HtmlComposer.Engine.Typesetter.Compose(string! html, Snail.Toolkit.HtmlComposer.Engine.PageSetup! setup, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Engine.Typesetter.Compose(System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Section!>! sections, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Engine.Typesetter.Typesetter(Snail.Toolkit.HtmlComposer.Engine.ITextMeasurer! measurer, Snail.Toolkit.HtmlComposer.Engine.IImageSource? images = null) -> void
+static Snail.Toolkit.HtmlComposer.Engine.Border.None.get -> Snail.Toolkit.HtmlComposer.Engine.Border
+static Snail.Toolkit.HtmlComposer.Engine.Border.operator !=(Snail.Toolkit.HtmlComposer.Engine.Border left, Snail.Toolkit.HtmlComposer.Engine.Border right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Border.operator ==(Snail.Toolkit.HtmlComposer.Engine.Border left, Snail.Toolkit.HtmlComposer.Engine.Border right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.BorderSide.operator !=(Snail.Toolkit.HtmlComposer.Engine.BorderSide left, Snail.Toolkit.HtmlComposer.Engine.BorderSide right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.BorderSide.operator ==(Snail.Toolkit.HtmlComposer.Engine.BorderSide left, Snail.Toolkit.HtmlComposer.Engine.BorderSide right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Composition.operator !=(Snail.Toolkit.HtmlComposer.Engine.Composition? left, Snail.Toolkit.HtmlComposer.Engine.Composition? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Composition.operator ==(Snail.Toolkit.HtmlComposer.Engine.Composition? left, Snail.Toolkit.HtmlComposer.Engine.Composition? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Edges.All(float length) -> Snail.Toolkit.HtmlComposer.Engine.Edges
+static Snail.Toolkit.HtmlComposer.Engine.Edges.operator !=(Snail.Toolkit.HtmlComposer.Engine.Edges left, Snail.Toolkit.HtmlComposer.Engine.Edges right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Edges.operator ==(Snail.Toolkit.HtmlComposer.Engine.Edges left, Snail.Toolkit.HtmlComposer.Engine.Edges right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Font.operator !=(Snail.Toolkit.HtmlComposer.Engine.Font? left, Snail.Toolkit.HtmlComposer.Engine.Font? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Font.operator ==(Snail.Toolkit.HtmlComposer.Engine.Font? left, Snail.Toolkit.HtmlComposer.Engine.Font? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.FontMetrics.operator !=(Snail.Toolkit.HtmlComposer.Engine.FontMetrics left, Snail.Toolkit.HtmlComposer.Engine.FontMetrics right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.FontMetrics.operator ==(Snail.Toolkit.HtmlComposer.Engine.FontMetrics left, Snail.Toolkit.HtmlComposer.Engine.FontMetrics right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Image.operator !=(Snail.Toolkit.HtmlComposer.Engine.Image? left, Snail.Toolkit.HtmlComposer.Engine.Image? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Image.operator ==(Snail.Toolkit.HtmlComposer.Engine.Image? left, Snail.Toolkit.HtmlComposer.Engine.Image? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.ImageBox.operator !=(Snail.Toolkit.HtmlComposer.Engine.ImageBox? left, Snail.Toolkit.HtmlComposer.Engine.ImageBox? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.ImageBox.operator ==(Snail.Toolkit.HtmlComposer.Engine.ImageBox? left, Snail.Toolkit.HtmlComposer.Engine.ImageBox? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Note.operator !=(Snail.Toolkit.HtmlComposer.Engine.Note? left, Snail.Toolkit.HtmlComposer.Engine.Note? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Note.operator ==(Snail.Toolkit.HtmlComposer.Engine.Note? left, Snail.Toolkit.HtmlComposer.Engine.Note? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Page.operator !=(Snail.Toolkit.HtmlComposer.Engine.Page? left, Snail.Toolkit.HtmlComposer.Engine.Page? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Page.operator ==(Snail.Toolkit.HtmlComposer.Engine.Page? left, Snail.Toolkit.HtmlComposer.Engine.Page? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.PageSetup.A4.get -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+static Snail.Toolkit.HtmlComposer.Engine.PageSetup.A5.get -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+static Snail.Toolkit.HtmlComposer.Engine.PageSetup.Letter.get -> Snail.Toolkit.HtmlComposer.Engine.PageSetup!
+static Snail.Toolkit.HtmlComposer.Engine.PageSetup.operator !=(Snail.Toolkit.HtmlComposer.Engine.PageSetup? left, Snail.Toolkit.HtmlComposer.Engine.PageSetup? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.PageSetup.operator ==(Snail.Toolkit.HtmlComposer.Engine.PageSetup? left, Snail.Toolkit.HtmlComposer.Engine.PageSetup? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Points.FromInches(float inches) -> float
+static Snail.Toolkit.HtmlComposer.Engine.Points.FromMillimeters(float millimeters) -> float
+static Snail.Toolkit.HtmlComposer.Engine.Points.FromPixels(float pixels) -> float
+static Snail.Toolkit.HtmlComposer.Engine.Rect.operator !=(Snail.Toolkit.HtmlComposer.Engine.Rect left, Snail.Toolkit.HtmlComposer.Engine.Rect right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Rect.operator ==(Snail.Toolkit.HtmlComposer.Engine.Rect left, Snail.Toolkit.HtmlComposer.Engine.Rect right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.RenderBox.operator !=(Snail.Toolkit.HtmlComposer.Engine.RenderBox? left, Snail.Toolkit.HtmlComposer.Engine.RenderBox? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.RenderBox.operator ==(Snail.Toolkit.HtmlComposer.Engine.RenderBox? left, Snail.Toolkit.HtmlComposer.Engine.RenderBox? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Rgba.Black.get -> Snail.Toolkit.HtmlComposer.Engine.Rgba
+static Snail.Toolkit.HtmlComposer.Engine.Rgba.operator !=(Snail.Toolkit.HtmlComposer.Engine.Rgba left, Snail.Toolkit.HtmlComposer.Engine.Rgba right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Rgba.operator ==(Snail.Toolkit.HtmlComposer.Engine.Rgba left, Snail.Toolkit.HtmlComposer.Engine.Rgba right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Section.operator !=(Snail.Toolkit.HtmlComposer.Engine.Section? left, Snail.Toolkit.HtmlComposer.Engine.Section? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.Section.operator ==(Snail.Toolkit.HtmlComposer.Engine.Section? left, Snail.Toolkit.HtmlComposer.Engine.Section? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.TextSpan.operator !=(Snail.Toolkit.HtmlComposer.Engine.TextSpan? left, Snail.Toolkit.HtmlComposer.Engine.TextSpan? right) -> bool
+static Snail.Toolkit.HtmlComposer.Engine.TextSpan.operator ==(Snail.Toolkit.HtmlComposer.Engine.TextSpan? left, Snail.Toolkit.HtmlComposer.Engine.TextSpan? right) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.Border.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.Border.ToString() -> string
+~override Snail.Toolkit.HtmlComposer.Engine.BorderSide.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.BorderSide.ToString() -> string
+~override Snail.Toolkit.HtmlComposer.Engine.Edges.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.Edges.ToString() -> string
+~override Snail.Toolkit.HtmlComposer.Engine.FontMetrics.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.FontMetrics.ToString() -> string
+~override Snail.Toolkit.HtmlComposer.Engine.Rect.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.Rect.ToString() -> string
+~override Snail.Toolkit.HtmlComposer.Engine.Rgba.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Engine.Rgba.ToString() -> string

@@ -1,0 +1,19 @@
+#nullable enable
+override sealed Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.Equals(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? other) -> bool
+override Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.<Clone>$() -> Snail.Toolkit.HtmlComposer.Pdf.PdfOptions!
+override Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.ToString() -> string!
+Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdf
+Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdf.HtmlToPdf(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary! fonts, Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? options = null) -> void
+Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdfRegistration
+Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdfRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdfRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddHtmlToPdf(Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Snail.Toolkit.HtmlComposer.Pdf.PdfOptions
+Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.Creator.get -> string?
+Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.Creator.init -> void
+Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.Equals(Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? other) -> bool
+Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.PdfOptions() -> void
+static Snail.Toolkit.HtmlComposer.Pdf.HtmlToPdfRegistration.AddHtmlToPdf(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.operator !=(Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? left, Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? right) -> bool
+static Snail.Toolkit.HtmlComposer.Pdf.PdfOptions.operator ==(Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? left, Snail.Toolkit.HtmlComposer.Pdf.PdfOptions? right) -> bool

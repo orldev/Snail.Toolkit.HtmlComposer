@@ -68,7 +68,7 @@ internal static class CssValues
             return ReadHex(value[1..]);
         }
 
-        int open = value.IndexOf('(');
+        int open = value.IndexOf('(', StringComparison.Ordinal);
         if (open < 0 || !value.EndsWith(')'))
         {
             return null;

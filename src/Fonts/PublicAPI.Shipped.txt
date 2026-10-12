@@ -1,0 +1,86 @@
+#nullable enable
+abstract Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Write(Snail.Toolkit.HtmlComposer.Engine.Composition! composition, System.IO.Stream! output, Snail.Toolkit.HtmlComposer.Fonts.Faces! faces, System.Threading.CancellationToken ct) -> void
+abstract Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.<Clone>$() -> Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions!
+override Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.ToString() -> string!
+override Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.GetHashCode() -> int
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Convert(string! html, Snail.Toolkit.HtmlComposer.Engine.PageSetup? setup = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> byte[]!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Convert(System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Section!>! sections, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> byte[]!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Converter(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary! library, TOptions! options) -> void
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Library.get -> Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Options.get -> TOptions!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Render(Snail.Toolkit.HtmlComposer.Engine.Composition! composition, System.IO.Stream! output, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> void
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Typeset(string! html, Snail.Toolkit.HtmlComposer.Engine.PageSetup? setup = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Typeset(System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Section!>! sections, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Write(string! html, System.IO.Stream! output, Snail.Toolkit.HtmlComposer.Engine.PageSetup? setup = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.Write(System.Collections.Generic.IReadOnlyList<Snail.Toolkit.HtmlComposer.Engine.Section!>! sections, System.IO.Stream! output, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Engine.Composition!
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Author.get -> string?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Author.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.BaseDirectory.get -> string?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.BaseDirectory.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.DocumentOptions() -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.DocumentOptions(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions! original) -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Images.get -> Snail.Toolkit.HtmlComposer.Engine.IImageSource?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Images.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Keywords.get -> string?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Keywords.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Subject.get -> string?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Subject.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Title.get -> string?
+Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Title.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.Faces
+Snail.Toolkit.HtmlComposer.Fonts.Faces.Dispose() -> void
+Snail.Toolkit.HtmlComposer.Fonts.Faces.Faces(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary! library) -> void
+Snail.Toolkit.HtmlComposer.Fonts.Faces.For(Snail.Toolkit.HtmlComposer.Engine.Font! font) -> SkiaSharp.SKFont!
+Snail.Toolkit.HtmlComposer.Fonts.Faces.Measure(string! text, Snail.Toolkit.HtmlComposer.Engine.Font! font) -> float
+Snail.Toolkit.HtmlComposer.Fonts.Faces.MetricsOf(Snail.Toolkit.HtmlComposer.Engine.Font! font) -> Snail.Toolkit.HtmlComposer.Engine.FontMetrics
+Snail.Toolkit.HtmlComposer.Fonts.Faces.Missing(string! text, Snail.Toolkit.HtmlComposer.Engine.Font! font) -> System.Collections.Generic.IEnumerable<System.Text.Rune>!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.Add(System.IO.Stream! stream) -> Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.AddDirectory(string! path) -> Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.AddFile(string! path) -> Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.AddResource(System.Reflection.Assembly! assembly, string! name) -> Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.Dispose() -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Content.get -> byte[]!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Content.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Deconstruct(out string! Family, out bool IsBold, out bool IsItalic, out byte[]! Content) -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.EmbeddedFace() -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.EmbeddedFace(string! Family, bool IsBold, bool IsItalic, byte[]! Content) -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Equals(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace other) -> bool
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Family.get -> string!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Family.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.IsBold.get -> bool
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.IsBold.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.IsItalic.get -> bool
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.IsItalic.init -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.FacesOf(System.Collections.Generic.IReadOnlyCollection<Snail.Toolkit.HtmlComposer.Engine.Font!>! fonts) -> System.Collections.Generic.IEnumerable<Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace>!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.Families.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.FontLibrary() -> void
+Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.Unembeddable(System.Collections.Generic.IReadOnlyCollection<Snail.Toolkit.HtmlComposer.Engine.Font!>! fonts) -> System.Collections.Generic.IEnumerable<string!>!
+Snail.Toolkit.HtmlComposer.Fonts.FontsRegistration
+Snail.Toolkit.HtmlComposer.Fonts.FontsRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+Snail.Toolkit.HtmlComposer.Fonts.FontsRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddFonts(System.Action<Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!>! load) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Snail.Toolkit.HtmlComposer.Fonts.LocalPictures
+Snail.Toolkit.HtmlComposer.Fonts.LocalPictures.Load(string! source) -> Snail.Toolkit.HtmlComposer.Engine.Image?
+Snail.Toolkit.HtmlComposer.Fonts.LocalPictures.LocalPictures(string? baseDirectory) -> void
+Snail.Toolkit.HtmlComposer.Fonts.MemoryPictures
+Snail.Toolkit.HtmlComposer.Fonts.MemoryPictures.Add(string! source, byte[]! content) -> Snail.Toolkit.HtmlComposer.Fonts.MemoryPictures!
+Snail.Toolkit.HtmlComposer.Fonts.MemoryPictures.Load(string! source) -> Snail.Toolkit.HtmlComposer.Engine.Image?
+Snail.Toolkit.HtmlComposer.Fonts.MemoryPictures.MemoryPictures(string? baseDirectory = null) -> void
+Snail.Toolkit.HtmlComposer.Fonts.Notes
+static Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.operator !=(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? left, Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? right) -> bool
+static Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.operator ==(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? left, Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? right) -> bool
+static Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.operator !=(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace left, Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace right) -> bool
+static Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.operator ==(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace left, Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace right) -> bool
+static Snail.Toolkit.HtmlComposer.Fonts.FontsRegistration.AddFonts(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Snail.Toolkit.HtmlComposer.Fonts.FontLibrary!>! load) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Snail.Toolkit.HtmlComposer.Fonts.Notes.For(Snail.Toolkit.HtmlComposer.Engine.Composition! composition, Snail.Toolkit.HtmlComposer.Fonts.FontLibrary! library, Snail.Toolkit.HtmlComposer.Fonts.Faces! measurer) -> System.Collections.Generic.IEnumerable<Snail.Toolkit.HtmlComposer.Engine.Note!>!
+virtual Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.NotesFor(Snail.Toolkit.HtmlComposer.Engine.Composition! composition) -> System.Collections.Generic.IEnumerable<Snail.Toolkit.HtmlComposer.Engine.Note!>!
+virtual Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.EqualityContract.get -> System.Type!
+virtual Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Equals(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? other) -> bool
+virtual Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.PrintMembers(System.Text.StringBuilder! builder) -> bool
+~override Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Equals(object obj) -> bool
+~override Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.ToString() -> string

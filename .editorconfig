@@ -1,5 +1,7 @@
-# The rules this repository is written by, as far as an editor and the compiler can check them.
-# The rest — what to name a thing, when a remark is earned — lives in prose, not here.
+# The shared .editorconfig of every Snail library and server built on Snail.Sdk: copied byte for byte, checked by the
+# conformance check. Formatting only. The rules — which style is required, which analyzer fails the build, what a test
+# project is spared — ship in the Snail.Sdk package and change with its version, not with a copy of this file. A
+# repository not yet on Snail.Sdk keeps version 1 of this file, which carried the rules. See docs/standard.md.
 
 root = true
 
@@ -11,91 +13,8 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-[*.{csproj,props,targets,slnx,xml,yml,yaml,json}]
+[*.{csproj,props,targets,slnx,xml,yml,yaml,json,toml}]
 indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
-
-[*.cs]
-# Reported in the build (EnforceCodeStyleInBuild), so a warning here is an error under -warnaserror.
-csharp_style_namespace_declarations = file_scoped:warning
-dotnet_diagnostic.IDE0005.severity = warning
-
-# Usings: System first, one group.
-dotnet_sort_system_directives_first = true
-dotnet_separate_import_directive_groups = false
-
-# var where the type is obvious from the right-hand side; stated otherwise.
-csharp_style_var_for_built_in_types = false:suggestion
-csharp_style_var_when_type_is_apparent = true:suggestion
-csharp_style_var_elsewhere = false:suggestion
-
-# Expression bodies for what fits on a line; braces always for statements.
-csharp_style_expression_bodied_methods = when_on_single_line:suggestion
-csharp_style_expression_bodied_constructors = when_on_single_line:suggestion
-csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
-csharp_style_expression_bodied_properties = true:suggestion
-csharp_style_expression_bodied_accessors = true:suggestion
-csharp_style_expression_bodied_lambdas = true:suggestion
-csharp_prefer_braces = true:suggestion
-
-# Modern syntax: collection expressions, primary constructors, patterns, switch expressions.
-dotnet_style_collection_initializer = true:suggestion
-dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
-csharp_style_prefer_primary_constructors = true:suggestion
-csharp_style_prefer_pattern_matching = true:suggestion
-csharp_style_prefer_switch_expression = true:suggestion
-csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
-csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
-
-# static on a one-line lambda guards against a capture the lambda is there to make as often as not,
-# and in a LINQ chain it is a word the reader has to look past.
-csharp_prefer_static_anonymous_functions = false:none
-dotnet_diagnostic.IDE0320.severity = none
-
-# Parentheses wherever precedence is not plain to a reader.
-dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:suggestion
-dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:suggestion
-dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:suggestion
-
-# A discard arm is a deliberate default, a builder is appended for its effect, and a guard clause reads
-# better than a conditional that spans lines: these hints argue with choices the code makes on purpose.
-dotnet_diagnostic.IDE0010.severity = none
-dotnet_diagnostic.IDE0072.severity = none
-dotnet_diagnostic.IDE0058.severity = none
-dotnet_diagnostic.IDE0046.severity = none
-
-# No this., no redundant qualification.
-dotnet_style_qualification_for_field = false:suggestion
-dotnet_style_qualification_for_property = false:suggestion
-dotnet_style_qualification_for_method = false:suggestion
-dotnet_style_qualification_for_event = false:suggestion
-
-# Code breathes: one blank line between members, never two.
-dotnet_style_allow_multiple_blank_lines_experimental = false:suggestion
-csharp_style_allow_embedded_statements_on_same_line_experimental = false:suggestion
-csharp_style_allow_blank_lines_between_consecutive_braces_experimental = false:suggestion
-
-# Naming: constants and static readonly fields in PascalCase, private instance fields _camelCase.
-dotnet_naming_rule.constants_pascal.symbols = constants
-dotnet_naming_rule.constants_pascal.style = pascal_case
-dotnet_naming_rule.constants_pascal.severity = suggestion
-dotnet_naming_symbols.constants.applicable_kinds = field
-dotnet_naming_symbols.constants.required_modifiers = const
-
-dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
-dotnet_naming_rule.static_readonly_pascal.style = pascal_case
-dotnet_naming_rule.static_readonly_pascal.severity = suggestion
-dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
-dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
-
-dotnet_naming_rule.private_fields_underscore.symbols = private_fields
-dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
-dotnet_naming_rule.private_fields_underscore.severity = suggestion
-dotnet_naming_symbols.private_fields.applicable_kinds = field
-dotnet_naming_symbols.private_fields.applicable_accessibilities = private
-
-dotnet_naming_style.pascal_case.capitalization = pascal_case
-dotnet_naming_style.underscore_camel_case.capitalization = camel_case
-dotnet_naming_style.underscore_camel_case.required_prefix = _

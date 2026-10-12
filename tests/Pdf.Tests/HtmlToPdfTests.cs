@@ -72,7 +72,7 @@ public sealed class HtmlToPdfTests : IDisposable
     [Fact]
     public void Convert_TrackedText_DrawsTheGlyphsWhereTheyWereMeasured()
     {
-        const float Tracking = 1.5f;
+        const float tracking = 1.5f;
         const string html = "<p style='letter-spacing:1.5pt'>Tracking</p>";
         var converter = new HtmlToPdf(_fonts);
         TextSpan span = Assert.Single(converter.Typeset(html).Pages[0].Spans);
@@ -82,7 +82,7 @@ public sealed class HtmlToPdfTests : IDisposable
         UglyToad.PdfPig.Content.Page page = document.GetPage(1);
 
         Assert.Equal(span.X, page.Letters[0].StartBaseLine.X, 0.5);
-        Assert.Equal(span.X + span.Width - Tracking, page.Letters[^1].EndBaseLine.X, 0.5);
+        Assert.Equal(span.X + span.Width - tracking, page.Letters[^1].EndBaseLine.X, 0.5);
         Assert.Equal(0, Count(pdf, "/Type3"));
         Assert.Contains("Tracking", page.Text, StringComparison.Ordinal);
     }

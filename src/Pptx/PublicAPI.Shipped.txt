@@ -1,0 +1,21 @@
+#nullable enable
+override sealed Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Equals(Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions? other) -> bool
+override Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.<Clone>$() -> Snail.Toolkit.HtmlComposer.Pptx.PptxOptions!
+override Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Equals(object? obj) -> bool
+override Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.GetHashCode() -> int
+override Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.ToString() -> string!
+Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptx
+Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptx.HtmlToPptx(Snail.Toolkit.HtmlComposer.Fonts.FontLibrary! fonts, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? options = null) -> void
+Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptxRegistration
+Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptxRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptxRegistration.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddHtmlToPptx(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.EmbedFonts.get -> bool
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.EmbedFonts.init -> void
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Equals(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? other) -> bool
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Language.get -> string?
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Language.init -> void
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.PptxOptions() -> void
+static Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptxRegistration.AddHtmlToPptx(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.operator !=(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? left, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? right) -> bool
+static Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.operator ==(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? left, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? right) -> bool

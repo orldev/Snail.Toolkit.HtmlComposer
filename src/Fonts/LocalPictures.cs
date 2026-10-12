@@ -21,7 +21,7 @@ public sealed class LocalPictures(string? baseDirectory) : IImageSource
 
     private static byte[]? FromDataUri(string source)
     {
-        int comma = source.IndexOf(',');
+        int comma = source.IndexOf(',', StringComparison.Ordinal);
 
         if (comma < 0 || !source[..comma].EndsWith(";base64", StringComparison.OrdinalIgnoreCase))
         {

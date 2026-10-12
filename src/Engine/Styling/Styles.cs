@@ -32,7 +32,7 @@ internal static class Styles
             : parent.Color;
         float size = font.Size;
 
-        return new Style
+        var style = new Style
         {
             Font = font,
             Color = color,
@@ -43,7 +43,7 @@ internal static class Styles
             Transform = TransformOf(Declared("text-transform"), parent.Transform),
             VerticalAlign = VerticalAlignOf(Declared("vertical-align")),
             ObjectFit = ObjectFitOf(Declared("object-fit")),
-            IsCollapsed = CollapsedOf(Declared("border-collapse"), parent.IsCollapsed),
+            IsCollapsed = IsCollapsed(Declared("border-collapse"), parent.IsCollapsed),
             WhiteSpace = WhiteSpaceOf(Declared("white-space"), parent.WhiteSpace),
             TextIndent = LengthOf(Declared("text-indent"), size, rootFontSize) ?? parent.TextIndent,
             ListMarker = ListMarkerOf(Declared("list-style-type"), parent.ListMarker),
@@ -65,6 +65,8 @@ internal static class Styles
             BreakAfter = BreakOf(Declared("break-after") ?? Declared("page-break-after")),
             AvoidsBreakInside = BreakOf(Declared("break-inside") ?? Declared("page-break-inside")) == BreakRule.Avoid,
         };
+
+        return style;
     }
 
     private static Font FontOf(IReadOnlyDictionary<string, string> specified, Font parent, float rootFontSize)
@@ -84,7 +86,7 @@ internal static class Styles
             family,
             size,
             FontWeightOf(specified.GetValueOrDefault("font-weight"), parent.Weight),
-            FontStyleOf(specified.GetValueOrDefault("font-style"), parent.IsItalic),
+            IsItalic(specified.GetValueOrDefault("font-style"), parent.IsItalic),
             TrackingOf(specified.GetValueOrDefault("letter-spacing"), parent.Tracking, size, rootFontSize));
     }
 
@@ -132,7 +134,7 @@ internal static class Styles
         var keyword => CssValues.ReadNumber(keyword) is { } weight ? (int)Math.Clamp(weight, 1, 1000) : parent,
     };
 
-    private static bool FontStyleOf(string? value, bool parent) => Keyword(value) switch
+    private static bool IsItalic(string? value, bool parent) => Keyword(value) switch
     {
         "italic" or "oblique" => true,
         "normal" or "initial" => false,
@@ -210,7 +212,7 @@ internal static class Styles
         _ => VerticalAlign.Baseline,
     };
 
-    private static bool CollapsedOf(string? value, bool parent) => Keyword(value) switch
+    private static bool IsCollapsed(string? value, bool parent) => Keyword(value) switch
     {
         "collapse" => true,
         "separate" or "initial" => false,

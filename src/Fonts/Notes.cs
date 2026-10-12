@@ -24,17 +24,23 @@ public static class Notes
     /// could not be set is named here instead. Grouped by family: one arrow missing from one face is one note,
     /// however many times the document sets it.
     /// </remarks>
-    private static IEnumerable<Note> Unset(Composition composition, Faces measurer) =>
-        composition.Pages
-            .SelectMany(page => page.Spans)
-            .SelectMany(span => measurer
-                .Missing(span.Text, span.Font)
-                .Select(rune => (Family: string.Join(", ", span.Font.Families), Character: rune.ToString())))
-            .Distinct()
-            .GroupBy(missing => missing.Family)
-            .Select(family => new Note(
-                NoteKind.MissingGlyph,
-                family.Key,
-                $"Family \"{family.Key}\" has no glyph for {string.Join(' ', family.Select(missing => missing.Character).Order(StringComparer.Ordinal))}, "
-                + "which prints as a crossed box."));
+    private static IEnumerable<Note> Unset(Composition composition, Faces measurer)
+    {
+        var spans = composition.Pages.SelectMany(page => page.Spans);
+        var missing = spans.SelectMany(span => Missing(span, measurer)).Distinct();
+        var families = missing.GroupBy(character => character.Family);
+
+        return families.Select(family => new Note(
+            NoteKind.MissingGlyph,
+            family.Key,
+            $"Family \"{family.Key}\" has no glyph for {string.Join(' ', family.Select(character => character.Character).Order(StringComparer.Ordinal))}, "
+            + "which prints as a crossed box."));
+    }
+
+    /// <summary>
+    /// The characters of one span its face has no glyph for, each with the families the span asked for — named only
+    /// for a character that is missing, as almost every span has none.
+    /// </summary>
+    private static IEnumerable<(string Family, string Character)> Missing(TextSpan span, Faces measurer) =>
+        measurer.Missing(span.Text, span.Font).Select(rune => (Family: string.Join(", ", span.Font.Families), Character: rune.ToString()));
 }

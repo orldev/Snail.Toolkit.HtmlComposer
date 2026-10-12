@@ -225,12 +225,12 @@ internal sealed class Galley
             Gather(element, style, run, nested, basis);
         }
 
-        (float Min, float Max) = _breaker.Intrinsic(run);
+        (float min, float max) = _breaker.Intrinsic(run);
         float chrome = style.Padding.Resolve(basis).Horizontal + style.Border.Widths.Horizontal;
 
         return (
-            nested.Aggregate(Min, (least, child) => Math.Max(least, child.Min)) + chrome,
-            nested.Aggregate(Max, (widest, child) => Math.Max(widest, child.Max)) + chrome);
+            nested.Aggregate(min, (least, child) => Math.Max(least, child.Min)) + chrome,
+            nested.Aggregate(max, (widest, child) => Math.Max(widest, child.Max)) + chrome);
     }
 
     private void Gather(INode node, Style parent, List<InlineItem> run, List<(float Min, float Max)> nested, float basis)

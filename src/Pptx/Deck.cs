@@ -389,8 +389,7 @@ internal static class Deck
     {
         FontMetrics metrics = fonts.MetricsOf(span.Font);
         string face = fonts.For(span.Font).Typeface.FamilyName;
-
-        return new P.Shape(
+        var shape = new P.Shape(
             new P.NonVisualShapeProperties(
                 new P.NonVisualDrawingProperties { Id = id, Name = $"text{id}" },
                 new P.NonVisualShapeDrawingProperties(new A.ShapeLocks { NoGrouping = true }),
@@ -415,6 +414,8 @@ internal static class Deck
                 new A.Paragraph(
                     new A.ParagraphProperties(new A.LineSpacing(new A.SpacingPercent { Val = PerCent })),
                     new A.Run(RunProperties(span, face, language), new A.Text(span.Text)))));
+
+        return shape;
     }
 
     /// <summary>What a run is set in, and the language it is proofed in when the options name one.</summary>

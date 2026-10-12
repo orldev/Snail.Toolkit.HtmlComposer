@@ -47,11 +47,11 @@ public sealed class TypographyTests
     [Fact]
     public void LetterSpacing_BreaksTheLineEarlierThanTheUntrackedText()
     {
-        const string Text = "aaaa bbbb cccc dddd eeee";
+        const string text = "aaaa bbbb cccc dddd eeee";
 
-        Page loose = Typeset.Html($"<p style='margin:0;letter-spacing:2pt'>{Text}</p>").Pages[0];
+        Page loose = Typeset.Html($"<p style='margin:0;letter-spacing:2pt'>{text}</p>").Pages[0];
 
-        Assert.Equal([Text], Typeset.Html($"<p style='margin:0'>{Text}</p>").Pages[0].Lines);
+        Assert.Equal([text], Typeset.Html($"<p style='margin:0'>{text}</p>").Pages[0].Lines);
         Assert.Equal(["aaaa bbbb cccc dddd", "eeee"], loose.Lines);
     }
 
