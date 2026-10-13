@@ -33,6 +33,11 @@ internal static class Stacking
         return offsets;
     }
 
+    /// <summary>How tall a stack is, from the top margin of its first flow to the bottom margin of its last.</summary>
+    /// <remarks>
+    /// Only the last offset is needed, so it is carried rather than listed: the list was made for every block
+    /// measured. The additions are those of <see cref="Offsets"/>, in the same order, so the height is the same.
+    /// </remarks>
     public static float Height(IReadOnlyList<Flow> flows)
     {
         if (flows.Count == 0)
@@ -40,8 +45,15 @@ internal static class Stacking
             return 0;
         }
 
-        IReadOnlyList<float> offsets = Offsets(flows);
+        float top = 0;
+        top += flows[0].MarginTop;
 
-        return offsets[^1] + flows[^1].Height + flows[^1].MarginBottom;
+        for (int index = 1; index < flows.Count; index++)
+        {
+            top += flows[index - 1].Height;
+            top += Collapse(flows[index - 1].MarginBottom, flows[index].MarginTop);
+        }
+
+        return top + flows[^1].Height + flows[^1].MarginBottom;
     }
 }

@@ -18,11 +18,9 @@ internal sealed class Galley
 
     private readonly Tables _tables;
 
-    private readonly IImageSource? _images;
+    private readonly Pictures _pictures;
 
     private readonly List<Note> _notes;
-
-    private readonly Dictionary<string, Image?> _pictures = new(StringComparer.Ordinal);
 
     private readonly float _pageHeight;
 
@@ -30,12 +28,12 @@ internal sealed class Galley
 
     private float _rootFontSize = Style.Initial.Font.Size;
 
-    private Galley(Cascade cascade, Measurements measurements, IImageSource? images, List<Note> notes, float pageHeight, CancellationToken ct)
+    private Galley(Cascade cascade, Measurements measurements, Pictures pictures, List<Note> notes, float pageHeight, CancellationToken ct)
     {
         _cascade = cascade;
         _breaker = new LineBreaker(measurements, ct);
         _tables = new Tables(this);
-        _images = images;
+        _pictures = pictures;
         _notes = notes;
         _pageHeight = pageHeight;
         _ct = ct;
@@ -47,21 +45,22 @@ internal sealed class Galley
     /// <summary>Records one thing that could not be set as written.</summary>
     internal void Remark(Note note) => _notes.Add(note);
 
-    /// <summary>Sets a document into one column as wide as the content area, with the cascade of its own sheets unless one is given.</summary>
+    /// <summary>Sets a document into one column as wide as the content area, styled by the given cascade.</summary>
     /// <remarks>
-    /// A cascade is given when the same document is set again and again, as a running line is on every page:
-    /// its rules and its decisions hold as long as the elements do, and only the text between them changes.
+    /// The cascade is kept by a caller that sets the same document again and again, as a running line is set on
+    /// every page: its rules and its decisions hold as long as the elements do, and only the text between them
+    /// changes.
     /// </remarks>
     public static BlockFlow Set(
         IDocument document,
+        Cascade cascade,
         Rect content,
         Measurements measurements,
-        IImageSource? images,
+        Pictures pictures,
         List<Note> notes,
-        CancellationToken ct,
-        Cascade? cascade = null)
+        CancellationToken ct)
     {
-        var galley = new Galley(cascade ?? Cascade.Of(document), measurements, images, notes, content.Height, ct);
+        var galley = new Galley(cascade, measurements, pictures, notes, content.Height, ct);
 
         return galley.Root(document.DocumentElement, content);
     }
@@ -189,9 +188,15 @@ internal sealed class Galley
     private List<Flow> Resumed(IElement element, Style style, BorderBox box)
     {
         List<Flow> resumed = [];
+        INodeList children = element.ChildNodes;
 
-        foreach (IElement child in element.Children.Where(child => IsTag(child, "aside") && child.HasAttribute("resumed")))
+        for (int index = 0; index < children.Length; index++)
         {
+            if (children[index] is not IElement child || !IsTag(child, "aside") || !child.HasAttribute("resumed"))
+            {
+                continue;
+            }
+
             Style inner = Compute(child, style) with { Display = Display.Block };
 
             resumed.Add(Block(child, inner, box.ContentLeft, box.ContentWidth));
@@ -235,8 +240,12 @@ internal sealed class Galley
 
     private void Gather(INode node, Style parent, List<InlineItem> run, List<(float Min, float Max)> nested, float basis)
     {
-        foreach (INode child in node.ChildNodes)
+        INodeList children = node.ChildNodes;
+
+        for (int index = 0; index < children.Length; index++)
         {
+            INode child = children[index];
+
             _ct.ThrowIfCancellationRequested();
 
             if (child is IText text)
@@ -314,10 +323,20 @@ internal sealed class Galley
         return segments.Close();
     }
 
+    /// <summary>Sets the children of a node into the segments of the block they belong to, in order.</summary>
+    /// <remarks>
+    /// Children are walked by index, here and wherever the layout looks at an element's children: walking a
+    /// node list through its interface made an enumerator for every element, and its element collection
+    /// made a collection, an iterator and a filter on top.
+    /// </remarks>
     private void Walk(INode node, Style parent, Segments segments)
     {
-        foreach (INode child in node.ChildNodes)
+        INodeList children = node.ChildNodes;
+
+        for (int index = 0; index < children.Length; index++)
         {
+            INode child = children[index];
+
             _ct.ThrowIfCancellationRequested();
 
             if (child is IText text)
@@ -368,7 +387,7 @@ internal sealed class Galley
     private InlineItem? Picture(IElement element, Style style, float containingWidth)
     {
         string source = element.GetAttribute("src") ?? "";
-        Image? image = Read(source);
+        Image? image = _pictures.Read(source);
 
         if (image is not { Width: > 0, Height: > 0 })
         {
@@ -449,28 +468,10 @@ internal sealed class Galley
         return (across, across * ratio, null);
     }
 
-    /// <summary>Reads a picture once per document, however many times the layout asks about it.</summary>
-    /// <remarks>
-    /// A cell of a table is measured before it is set, so every picture in one is looked up twice. Reading it
-    /// twice would mean decoding the file twice and, for a picture that cannot be read, saying so twice.
-    /// </remarks>
-    private Image? Read(string source)
-    {
-        if (_pictures.TryGetValue(source, out Image? cached))
-        {
-            return cached;
-        }
-
-        Image? image = source.Length > 0 ? _images?.Load(source) : null;
-        _pictures[source] = image;
-
-        return image;
-    }
-
     private Note MissingPicture(string source)
     {
         string shown = source.Length > 80 ? $"{source[..77]}..." : source;
-        string text = _images is null
+        string text = !_pictures.HasSource
             ? $"Image \"{shown}\" was left out: the typesetter was given no image source."
             : $"Image \"{shown}\" was left out: it could not be read.";
 

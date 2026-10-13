@@ -363,8 +363,15 @@ internal sealed class Tables(Galley galley)
         bool isFooter,
         bool isContinued)
     {
-        foreach (IElement child in parent.Children)
+        INodeList children = parent.ChildNodes;
+
+        for (int index = 0; index < children.Length; index++)
         {
+            if (children[index] is not IElement child)
+            {
+                continue;
+            }
+
             Style computed = galley.Compute(child, style);
 
             if (computed.Display == Display.None)
@@ -399,9 +406,11 @@ internal sealed class Tables(Galley galley)
     {
         List<DeclaredCell> cells = [];
 
-        foreach (IElement child in row.Children)
+        INodeList children = row.ChildNodes;
+
+        for (int index = 0; index < children.Length; index++)
         {
-            if (!Galley.IsTag(child, "td") && !Galley.IsTag(child, "th"))
+            if (children[index] is not IElement child || (!Galley.IsTag(child, "td") && !Galley.IsTag(child, "th")))
             {
                 continue;
             }

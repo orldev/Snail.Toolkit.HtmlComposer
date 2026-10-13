@@ -16,7 +16,11 @@ internal sealed record Glue(Style Style, float Width) : Token(Width);
 /// <param name="Pieces">What the box holds, in order.</param>
 /// <param name="Width">How far the box advances the line.</param>
 /// <param name="IsBreakable">Whether the box may be cut between graphemes once it is wider than a whole line.</param>
-internal sealed record Box(IReadOnlyList<Piece> Pieces, float Width, bool IsBreakable) : Token(Width);
+/// <remarks>
+/// The pieces are an array because every line walks them, and a <c>foreach</c> over an array allocates no
+/// enumerator where one over a read-only list allocates one per word.
+/// </remarks>
+internal sealed record Box(Piece[] Pieces, float Width, bool IsBreakable) : Token(Width);
 
 /// <summary>A line end the markup asked for: a <c>br</c>, or a line feed the white space mode preserves.</summary>
 internal sealed record Forced() : Token(0);

@@ -1,3 +1,4 @@
+using System.Text;
 using Snail.Toolkit.HtmlComposer.Engine;
 
 namespace Snail.Toolkit.HtmlComposer.Fonts;
@@ -26,21 +27,48 @@ public static class Notes
     /// </remarks>
     private static IEnumerable<Note> Unset(Composition composition, Faces measurer)
     {
-        var spans = composition.Pages.SelectMany(page => page.Spans);
-        var missing = spans.SelectMany(span => Missing(span, measurer)).Distinct();
-        var families = missing.GroupBy(character => character.Family);
+        List<(string Family, string Character)> missing = Missing(composition, measurer);
+        var families = missing.Distinct().GroupBy(character => character.Family);
 
-        return families.Select(family => new Note(
-            NoteKind.MissingGlyph,
-            family.Key,
-            $"Family \"{family.Key}\" has no glyph for {string.Join(' ', family.Select(character => character.Character).Order(StringComparer.Ordinal))}, "
-            + "which prints as a crossed box."));
+        foreach (IGrouping<string, (string Family, string Character)> family in families)
+        {
+            yield return new Note(
+                NoteKind.MissingGlyph,
+                family.Key,
+                $"Family \"{family.Key}\" has no glyph for {string.Join(' ', family.Select(character => character.Character).Order(StringComparer.Ordinal))}, "
+                + "which prints as a crossed box.");
+        }
     }
 
-    /// <summary>
-    /// The characters of one span its face has no glyph for, each with the families the span asked for — named only
-    /// for a character that is missing, as almost every span has none.
-    /// </summary>
-    private static IEnumerable<(string Family, string Character)> Missing(TextSpan span, Faces measurer) =>
-        measurer.Missing(span.Text, span.Font).Select(rune => (Family: string.Join(", ", span.Font.Families), Character: rune.ToString()));
+    /// <summary>The characters the faces of a composition have no glyph for, each with the families its span asked for.</summary>
+    /// <remarks>
+    /// Each face is asked about each character once, and its families are named once: asking for every character
+    /// of every span, with the families joined again each time, was a fifth of the time a long document took. A
+    /// character is listed where the document first sets it in that face, which is where the query over every
+    /// character listed it first, so the notes come out the same and in the same order.
+    /// </remarks>
+    private static List<(string Family, string Character)> Missing(Composition composition, Faces measurer)
+    {
+        Dictionary<Font, (string Family, HashSet<int> Asked)> faces = [];
+        List<(string Family, string Character)> missing = [];
+
+        foreach (TextSpan span in composition.Pages.SelectMany(page => page.Spans))
+        {
+            if (!faces.TryGetValue(span.Font, out (string Family, HashSet<int> Asked) face))
+            {
+                face = (string.Join(", ", span.Font.Families), []);
+                faces[span.Font] = face;
+            }
+
+            foreach (Rune rune in span.Text.EnumerateRunes())
+            {
+                if (face.Asked.Add(rune.Value) && measurer.Lacks(rune, span.Font))
+                {
+                    missing.Add((face.Family, rune.ToString()));
+                }
+            }
+        }
+
+        return missing;
+    }
 }

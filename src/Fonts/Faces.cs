@@ -68,12 +68,18 @@ public sealed class Faces(FontLibrary library) : ITextMeasurer, IDisposable
 
         foreach (Rune rune in text.EnumerateRunes())
         {
-            if (!Rune.IsControl(rune) && !Rune.IsWhiteSpace(rune) && !face.ContainsGlyph(rune.Value))
+            if (Lacks(rune, face))
             {
                 yield return rune;
             }
         }
     }
+
+    /// <summary>Whether the face has no glyph for a character that draws one.</summary>
+    internal bool Lacks(Rune rune, Font font) => Lacks(rune, For(font));
+
+    private static bool Lacks(Rune rune, SKFont face) =>
+        !Rune.IsControl(rune) && !Rune.IsWhiteSpace(rune) && !face.ContainsGlyph(rune.Value);
 
     /// <inheritdoc/>
     public FontMetrics MetricsOf(Font font)

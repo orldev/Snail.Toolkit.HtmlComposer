@@ -83,6 +83,13 @@ public class Composing
     [Benchmark]
     public byte[] LongPptx() => _deck.Convert(_longWithMark);
 
+    /// <summary>
+    /// The same forty pages printed: the press decodes each picture it is handed and stores it once per
+    /// decoded image, so how many pictures the running head hands it is what this weighs.
+    /// </summary>
+    [Benchmark]
+    public byte[] LongPdf() => _converter.Convert(_longWithMark);
+
     private static IReadOnlyList<Section> Report()
     {
         PageSetup cover = PageSetup.A4 with { Margins = Edges.All(0), Background = new Rgba(0xD5, 0x23, 0x21) };

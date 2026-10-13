@@ -22,6 +22,18 @@ internal static class Styles
         ["xxx-large"] = 3f,
     };
 
+    private static readonly SideNames Margins = new("margin-top", "margin-right", "margin-bottom", "margin-left");
+
+    private static readonly SideNames Paddings = new("padding-top", "padding-right", "padding-bottom", "padding-left");
+
+    private static readonly BorderNames Top = new("border-top-style", "border-top-width", "border-top-color");
+
+    private static readonly BorderNames Right = new("border-right-style", "border-right-width", "border-right-color");
+
+    private static readonly BorderNames Bottom = new("border-bottom-style", "border-bottom-width", "border-bottom-color");
+
+    private static readonly BorderNames Left = new("border-left-style", "border-left-width", "border-left-color");
+
     public static Style Compute(IReadOnlyDictionary<string, string> specified, Style parent, float rootFontSize)
     {
         string? Declared(string property) => specified.GetValueOrDefault(property);
@@ -49,8 +61,8 @@ internal static class Styles
             ListMarker = ListMarkerOf(Declared("list-style-type"), parent.ListMarker),
             Orphans = CountOf(Declared("orphans"), parent.Orphans),
             Widows = CountOf(Declared("widows"), parent.Widows),
-            Margin = SidesOf(specified, "margin", size, rootFontSize),
-            Padding = SidesOf(specified, "padding", size, rootFontSize),
+            Margin = SidesOf(specified, Margins, size, rootFontSize),
+            Padding = SidesOf(specified, Paddings, size, rootFontSize),
             Border = BorderOf(specified, color, size, rootFontSize),
             BorderRadius = Declared("border-top-left-radius")?.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var radius, ..]
                 ? CssValues.ReadLength(radius, size, rootFontSize)?.Points ?? 0
@@ -269,12 +281,14 @@ internal static class Styles
     private static Length? LengthOf(string? value, float fontSize, float rootFontSize) =>
         value is null ? null : CssValues.ReadLength(value, fontSize, rootFontSize);
 
-    private static Sides SidesOf(IReadOnlyDictionary<string, string> specified, string property, float fontSize, float rootFontSize) =>
+    /// <summary>The four sides of a margin or a padding.</summary>
+    /// <remarks>The property names are constants: building them per element was twenty strings for every element styled.</remarks>
+    private static Sides SidesOf(IReadOnlyDictionary<string, string> specified, SideNames properties, float fontSize, float rootFontSize) =>
         new(
-            SideOf(specified.GetValueOrDefault($"{property}-top"), fontSize, rootFontSize),
-            SideOf(specified.GetValueOrDefault($"{property}-right"), fontSize, rootFontSize),
-            SideOf(specified.GetValueOrDefault($"{property}-bottom"), fontSize, rootFontSize),
-            SideOf(specified.GetValueOrDefault($"{property}-left"), fontSize, rootFontSize));
+            SideOf(specified.GetValueOrDefault(properties.Top), fontSize, rootFontSize),
+            SideOf(specified.GetValueOrDefault(properties.Right), fontSize, rootFontSize),
+            SideOf(specified.GetValueOrDefault(properties.Bottom), fontSize, rootFontSize),
+            SideOf(specified.GetValueOrDefault(properties.Left), fontSize, rootFontSize));
 
     private static Length? SideOf(string? value, float fontSize, float rootFontSize) => Keyword(value) switch
     {
@@ -285,27 +299,27 @@ internal static class Styles
 
     private static Border BorderOf(IReadOnlyDictionary<string, string> specified, Rgba color, float fontSize, float rootFontSize) =>
         new(
-            BorderSideOf(specified, "top", color, fontSize, rootFontSize),
-            BorderSideOf(specified, "right", color, fontSize, rootFontSize),
-            BorderSideOf(specified, "bottom", color, fontSize, rootFontSize),
-            BorderSideOf(specified, "left", color, fontSize, rootFontSize));
+            BorderSideOf(specified, Top, color, fontSize, rootFontSize),
+            BorderSideOf(specified, Right, color, fontSize, rootFontSize),
+            BorderSideOf(specified, Bottom, color, fontSize, rootFontSize),
+            BorderSideOf(specified, Left, color, fontSize, rootFontSize));
 
     private static BorderSide BorderSideOf(
         IReadOnlyDictionary<string, string> specified,
-        string side,
+        BorderNames side,
         Rgba color,
         float fontSize,
         float rootFontSize)
     {
-        string? stroke = Keyword(specified.GetValueOrDefault($"border-{side}-style"));
+        string? stroke = Keyword(specified.GetValueOrDefault(side.Style));
 
         if (stroke is null or "none" or "hidden" or "initial")
         {
             return default;
         }
 
-        float width = BorderWidthOf(specified.GetValueOrDefault($"border-{side}-width"), fontSize, rootFontSize);
-        Rgba paint = specified.GetValueOrDefault($"border-{side}-color") is { } declared
+        float width = BorderWidthOf(specified.GetValueOrDefault(side.Width), fontSize, rootFontSize);
+        Rgba paint = specified.GetValueOrDefault(side.Color) is { } declared
             ? CssValues.ReadColor(declared, color) ?? color
             : color;
 
@@ -347,4 +361,10 @@ internal static class Styles
         value?.Contains(word, StringComparison.OrdinalIgnoreCase) == true;
 
     private static string? Keyword(string? value) => value?.Trim().ToLowerInvariant();
+
+    /// <summary>The names of the four sides of a box property, in the order CSS lists them.</summary>
+    private readonly record struct SideNames(string Top, string Right, string Bottom, string Left);
+
+    /// <summary>The names of the three properties that draw one side of a border.</summary>
+    private readonly record struct BorderNames(string Style, string Width, string Color);
 }

@@ -61,6 +61,26 @@ public sealed class SharingTests : IDisposable
         Assert.All(together, document => Assert.Equal("%PDF", Encoding.ASCII.GetString(document, 0, 4)));
     }
 
+    /// <summary>
+    /// Compositions borrow their parsers from a pool, and a parser is not safe on two threads: setting a nested
+    /// rule registers a selector in the parser's own context and removes it again. A pair shared by two
+    /// compositions at once threw for nearly every one of them, so this sets nested rules on many threads.
+    /// </summary>
+    [Fact]
+    public void Typeset_NestedRulesOnManyThreadsAtOnce_SetsEveryDocumentAlike()
+    {
+        const string nested = "<style>p { font-family: 'PT Sans'; margin: 0; & b { font-size: 14pt } & + p { margin-top: 6pt } }</style>"
+            + "<p>Nested <b>rules</b> set</p><p>on many threads</p>";
+        var converter = new HtmlToPdf(_fonts);
+        float[] alone = Widths(converter.Typeset(nested));
+        var together = new ConcurrentBag<float[]>();
+
+        Parallel.For(0, 64, _ => together.Add(Widths(converter.Typeset(nested))));
+
+        Assert.Equal(64, together.Count);
+        Assert.All(together, widths => Assert.Equal(alone, widths));
+    }
+
     private static float[] Widths(Composition composition) =>
         [.. composition.Pages.SelectMany(page => page.Spans).Select(span => span.Width)];
 }

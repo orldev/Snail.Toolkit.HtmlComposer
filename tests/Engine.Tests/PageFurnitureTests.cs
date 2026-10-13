@@ -115,9 +115,41 @@ public sealed class PageFurnitureTests
         Assert.Equal(without.Baseline, beside.Baseline, 0.01);
     }
 
+    /// <summary>
+    /// A logo in the running head is read once for the document, so every page hands the writer the same
+    /// picture: read once per page, it was a picture per page, and the PDF press stored each of them.
+    /// </summary>
+    [Fact]
+    public void HeaderPicture_IsReadOnceAndSharedByEveryPage()
+    {
+        var source = new CountingPictures();
+        string header = "<div style='margin:0'><img src='/logo' width='8' height='8'> header</div>";
+
+        Composition composition = new Typesetter(new FixedPitch(), source)
+            .Compose($"<p style='margin:0'>{Typeset.Numbered(40)}</p>", Framed(header, footer: null));
+        var logos = composition.Pages.Select(page => Assert.Single(page.Images).Image).ToList();
+
+        Assert.True(composition.Pages.Count > 1);
+        Assert.Equal(1, source.Loads);
+        Assert.All(logos, logo => Assert.Same(logos[0], logo));
+    }
+
     private static PageSetup Framed(string? header, string? footer) =>
         new(200, 200, Edges.All(20)) { Header = header, Footer = footer };
 
     private static Composition Compose(string html, PageSetup setup) =>
         new Typesetter(new FixedPitch()).Compose(html, setup);
+
+    /// <summary>Answers every source with a new picture and counts how often it was asked.</summary>
+    private sealed class CountingPictures : IImageSource
+    {
+        public int Loads { get; private set; }
+
+        public Image? Load(string source)
+        {
+            Loads++;
+
+            return new Image([], 8, 8);
+        }
+    }
 }

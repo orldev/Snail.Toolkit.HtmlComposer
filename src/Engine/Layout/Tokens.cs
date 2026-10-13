@@ -22,9 +22,13 @@ internal sealed class Tokens(Measurements measurements)
 
     private readonly List<Piece> _pieces = [];
 
-    private readonly StringBuilder _word = new();
+    private char[] _word = new char[32];
+
+    private int _wordLength;
 
     private Style? _wordStyle;
+
+    private Glue? _space;
 
     private enum Role
     {
@@ -62,6 +66,22 @@ internal sealed class Tokens(Measurements measurements)
                     picture.Source));
                 break;
         }
+    }
+
+    /// <summary>This tokeniser emptied for the next run of inline content, its lists and its word buffer kept.</summary>
+    /// <remarks>
+    /// A breaker sets one run at a time and walks its tokens to the end before it takes the next, so one
+    /// tokeniser serves it throughout: a new one for every paragraph grew a token list, a piece list and a
+    /// word buffer from nothing each time, a ninth of what a long document allocated.
+    /// </remarks>
+    public Tokens Cleared()
+    {
+        _tokens.Clear();
+        _pieces.Clear();
+        _wordLength = 0;
+        _wordStyle = null;
+
+        return this;
     }
 
     public IReadOnlyList<Token> Close()
@@ -135,7 +155,7 @@ internal sealed class Tokens(Measurements measurements)
         switch (Classify(character, style.WhiteSpace))
         {
             case Role.Letter:
-                AppendToWord(character.ToString(), style);
+                AppendToWord(character, style);
                 break;
             case Role.Space:
                 AddSpace(character, style);
@@ -191,11 +211,43 @@ internal sealed class Tokens(Measurements measurements)
 
         if (_tokens is not [.., Glue])
         {
-            _tokens.Add(new Glue(style, measurements.Measure(" ", style.Font)));
+            _tokens.Add(SpaceIn(style));
         }
     }
 
+    /// <summary>The glue of a space between words of one style, made once for as long as the style lasts.</summary>
+    /// <remarks>
+    /// Every space of a paragraph is the same glue, as wide as a space of its face, and nothing tells one from
+    /// another: a glue for each of them was a tenth of what a long document allocated.
+    /// </remarks>
+    private Glue SpaceIn(Style style)
+    {
+        if (_space is null || !ReferenceEquals(_space.Style, style))
+        {
+            _space = new Glue(style, measurements.Measure(" ", style.Font));
+        }
+
+        return _space;
+    }
+
     private void AppendToWord(string text, Style style)
+    {
+        EnterWordStyle(style);
+        Room(text.Length);
+        text.CopyTo(_word.AsSpan(_wordLength));
+        _wordLength += text.Length;
+    }
+
+    /// <summary>Adds one letter to the word in progress.</summary>
+    /// <remarks>Every letter of a document comes through here, and a string per letter was a fifteenth of what a long one allocated.</remarks>
+    private void AppendToWord(char character, Style style)
+    {
+        EnterWordStyle(style);
+        Room(1);
+        _word[_wordLength++] = character;
+    }
+
+    private void EnterWordStyle(Style style)
     {
         if (_wordStyle is not null && !ReferenceEquals(_wordStyle, style))
         {
@@ -203,21 +255,34 @@ internal sealed class Tokens(Measurements measurements)
         }
 
         _wordStyle = style;
-        _word.Append(text);
     }
 
     private void FlushWord()
     {
-        if (_word.Length == 0 || _wordStyle is null)
+        if (_wordLength == 0 || _wordStyle is null)
         {
             return;
         }
 
-        string text = _word.ToString();
-        _pieces.Add(new TextPiece(text, _wordStyle, measurements.Measure(text, _wordStyle.Font)));
-        _word.Clear();
+        string text = measurements.Word(_word.AsSpan(0, _wordLength), _wordStyle.Font, out float width);
+        _pieces.Add(new TextPiece(text, _wordStyle, width));
+        _wordLength = 0;
     }
 
+    /// <summary>Makes room in the word buffer for as many more letters.</summary>
+    private void Room(int letters)
+    {
+        if (_wordLength + letters > _word.Length)
+        {
+            Array.Resize(ref _word, Math.Max(_word.Length * 2, _wordLength + letters));
+        }
+    }
+
+    /// <summary>Ends the word in progress and the box it belongs to.</summary>
+    /// <remarks>
+    /// Width and breakability are taken in one pass over the pieces. The width is summed in <see cref="double"/>,
+    /// as <c>Enumerable.Sum</c> summed it before, so a box is exactly as wide as it was.
+    /// </remarks>
     private void CloseBox()
     {
         FlushWord();
@@ -227,8 +292,17 @@ internal sealed class Tokens(Measurements measurements)
             return;
         }
 
-        bool isBreakable = _pieces.All(piece => piece is TextPiece { Style.WhiteSpace: not (WhiteSpace.Pre or WhiteSpace.NoWrap) });
-        _tokens.Add(new Box([.. _pieces], _pieces.Sum(piece => piece.Width), isBreakable));
+        Piece[] pieces = [.. _pieces];
+        double width = 0;
+        bool isBreakable = true;
+
+        foreach (Piece piece in pieces)
+        {
+            width += piece.Width;
+            isBreakable &= piece is TextPiece { Style.WhiteSpace: not (WhiteSpace.Pre or WhiteSpace.NoWrap) };
+        }
+
+        _tokens.Add(new Box(pieces, (float)width, isBreakable));
         _pieces.Clear();
     }
 
@@ -254,7 +328,7 @@ internal sealed class Tokens(Measurements measurements)
 
         public Box ToBox()
         {
-            List<Piece> pieces =
+            Piece[] pieces =
             [
                 .. _parts.Select(part => new TextPiece(part.Text.ToString(), part.Style, measurements.Measure(part.Text.ToString(), part.Style.Font))),
             ];

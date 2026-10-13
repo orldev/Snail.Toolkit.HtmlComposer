@@ -1,3 +1,4 @@
+using System.Text;
 using Snail.Toolkit.HtmlComposer.Engine.Styling;
 
 namespace Snail.Toolkit.HtmlComposer.Engine.Layout;
@@ -13,9 +14,13 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
 {
     internal const float Tolerance = 0.01f;
 
+    private readonly LineTexts _texts = new();
+
+    private readonly Tokens _tokens = new(measurements);
+
     public IReadOnlyList<LineFlow> Break(IReadOnlyList<InlineItem> items, Style block, float x, float width, Marker? marker)
     {
-        var tokens = new Tokens(measurements);
+        Tokens tokens = _tokens.Cleared();
 
         foreach (InlineItem item in items)
         {
@@ -45,7 +50,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
     /// </remarks>
     public (float Min, float Max) Intrinsic(IReadOnlyList<InlineItem> items)
     {
-        var tokens = new Tokens(measurements);
+        Tokens tokens = _tokens.Cleared();
 
         foreach (InlineItem item in items)
         {
@@ -88,7 +93,6 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         float cursor,
         float baseline,
         float stretch,
-        List<LineText> texts,
         List<LinePicture> pictures,
         List<LineBox> boxes)
     {
@@ -96,7 +100,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         {
             if (stretch == 0 && glue.Width > 0)
             {
-                texts.Add(TextOf(" ", cursor, baseline, glue.Width, glue.Style));
+                _texts.Add(" ", cursor, baseline, glue.Width, glue.Style);
                 Paint(boxes, cursor, baseline, glue.Width, glue.Style);
             }
 
@@ -109,7 +113,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             {
                 float on = baseline + Shift(text.Style);
 
-                texts.Add(TextOf(text.Text, cursor, on, text.Width, text.Style));
+                _texts.Add(text.Text, cursor, on, text.Width, text.Style);
                 Paint(boxes, cursor, on, text.Width, text.Style);
             }
 
@@ -176,68 +180,41 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
 
     private static bool IsPainted(Style style) => style.Background is { IsVisible: true } || style.Border.IsVisible;
 
-    private static LineText TextOf(string text, float x, float baseline, float width, Style style) =>
-        new(text, x, baseline, width, style.Font, style.Color, style.Decoration);
-
-    private static List<LineText> Merge(List<LineText> texts)
-    {
-        List<LineText> merged = [];
-
-        foreach (LineText text in texts)
-        {
-            if (merged.Count > 0 && CanJoin(merged[^1], text))
-            {
-                merged[^1] = merged[^1] with { Text = $"{merged[^1].Text}{text.Text}", Width = merged[^1].Width + text.Width };
-                continue;
-            }
-
-            merged.Add(text);
-        }
-
-        return merged;
-    }
-
-    /// <summary>Two runs are one span when they are set alike, sit on one baseline and touch.</summary>
-    /// <remarks>
-    /// The baseline has to be compared, not only the face: a superscript in the same face as the text beside
-    /// it touches that text and matches it in every other way, and joining the two would draw the raised run
-    /// back down on the line it was lifted off.
-    /// </remarks>
-    private static bool CanJoin(LineText left, LineText right) =>
-        left.Font == right.Font
-        && left.Color == right.Color
-        && left.Decoration == right.Decoration
-        && Math.Abs(left.Baseline - right.Baseline) < Tolerance
-        && Math.Abs(left.X + left.Width - right.X) < Tolerance;
-
     private LineFlow Build(IReadOnlyList<Token> tokens, Style block, float left, float available, bool isJustifiable, Marker? marker, float contentLeft)
     {
         (float ascent, float descent) = Extent(tokens, block, marker);
-        float slack = available - tokens.Sum(token => token.Width);
-        int glues = tokens.Count(token => token is Glue);
+        double used = 0;
+        int glues = 0;
+
+        for (int index = 0; index < tokens.Count; index++)
+        {
+            used += tokens[index].Width;
+            glues += tokens[index] is Glue ? 1 : 0;
+        }
+
+        float slack = available - (float)used;
         bool isJustified = isJustifiable && block.TextAlign == TextAlign.Justify && glues > 0 && slack > 0;
         float stretch = isJustified ? slack / glues : 0;
         float cursor = left + (isJustified ? 0 : Offset(block.TextAlign, Math.Max(0, slack)));
 
-        List<LineText> texts = [];
         List<LinePicture> pictures = [];
         List<LineMark> marks = [];
         List<LineBox> boxes = [];
 
         if (marker is not null)
         {
-            Hang(marker, contentLeft, ascent, texts, marks);
+            Hang(marker, contentLeft, ascent, marks);
         }
 
-        foreach (Token token in tokens)
+        for (int index = 0; index < tokens.Count; index++)
         {
-            cursor = Set(token, cursor, ascent, stretch, texts, pictures, boxes);
+            cursor = Set(tokens[index], cursor, ascent, stretch, pictures, boxes);
         }
 
-        return new LineFlow(ascent + descent, Merge(texts), pictures, marks, boxes);
+        return new LineFlow(ascent + descent, _texts.Close(), pictures, marks, boxes);
     }
 
-    private void Hang(Marker marker, float contentLeft, float baseline, List<LineText> texts, List<LineMark> marks)
+    private void Hang(Marker marker, float contentLeft, float baseline, List<LineMark> marks)
     {
         Font font = marker.Style.Font;
         float right = contentLeft - measurements.Measure(" ", font);
@@ -249,27 +226,43 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         }
 
         float width = measurements.Measure(marker.Text, font);
-        texts.Add(new LineText(marker.Text, right - width, baseline, width, font, marker.Style.Color, TextDecoration.None));
+        _texts.Add(marker.Text, right - width, baseline, width, font, marker.Style.Color, TextDecoration.None);
     }
 
+    /// <summary>How far the line reaches above and below its baseline: the most any of its runs asks for.</summary>
+    /// <remarks>
+    /// A running maximum over the block, every run and the marker, in that order, rather than a list of them
+    /// all: the list, the query over it and an array per space were among the largest allocations of a long document.
+    /// </remarks>
     private (float Ascent, float Descent) Extent(IReadOnlyList<Token> tokens, Style block, Marker? marker)
     {
-        List<(float Ascent, float Descent)> extents = [Extent(block), .. tokens.SelectMany(Extents)];
+        (float Ascent, float Descent) line = Extent(block);
 
-        if (marker is not null)
+        for (int index = 0; index < tokens.Count; index++)
         {
-            extents.Add(Extent(marker.Style));
+            if (tokens[index] is Glue glue)
+            {
+                line = Taller(line, Extent(glue.Style));
+            }
+
+            if (tokens[index] is Box box)
+            {
+                foreach (Piece piece in box.Pieces)
+                {
+                    line = Taller(line, Extent(piece));
+                }
+            }
         }
 
-        return (extents.Max(extent => extent.Ascent), extents.Max(extent => extent.Descent));
+        return marker is null ? line : Taller(line, Extent(marker.Style));
     }
 
-    private IEnumerable<(float Ascent, float Descent)> Extents(Token token) => token switch
-    {
-        Glue glue => [Extent(glue.Style)],
-        Box box => box.Pieces.Select(Extent),
-        _ => [],
-    };
+    private static (float Ascent, float Descent) Taller((float Ascent, float Descent) line, (float Ascent, float Descent) run) =>
+        (Larger(line.Ascent, run.Ascent), Larger(line.Descent, run.Descent));
+
+    /// <summary>The larger of two extents, as <c>Enumerable.Max</c> decides it.</summary>
+    /// <remarks>A NaN gives way to any value and never wins over one, so the line is as tall as it was.</remarks>
+    private static float Larger(float current, float candidate) => float.IsNaN(current) || candidate > current ? candidate : current;
 
     private (float Ascent, float Descent) Extent(Piece piece)
     {
@@ -326,6 +319,99 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         float halfLeading = (lineHeight - metrics.Ascent - metrics.Descent) / 2;
 
         return (metrics.Ascent + halfLeading, metrics.Descent + halfLeading);
+    }
+
+    /// <summary>The texts of one line as they are set, each run of touching texts set alike joined into one span.</summary>
+    /// <remarks>
+    /// Joined as the line is set: a text was made for every word and every space, listed, and then joined run by
+    /// run, and those texts and their lists were nearly a third of what a long document allocated. A text joins the
+    /// run when it is set as the run's first text is, sits on its baseline and touches its end, the widths
+    /// being added in the order the texts come — what joining the list afterwards did, so the spans are the
+    /// same to the last bit. The baseline is compared and not only the face: a superscript touches the text
+    /// beside it and matches it in every other way, and joining the two would draw it back down on the line.
+    /// One instance serves a breaker, which sets one line at a time.
+    /// </remarks>
+    private sealed class LineTexts
+    {
+        private readonly List<LineText> _set = [];
+
+        private readonly StringBuilder _joined = new();
+
+        private string _text = string.Empty;
+
+        private int _count;
+
+        private float _x;
+
+        private float _baseline;
+
+        private float _width;
+
+        private Font? _font;
+
+        private Rgba _color;
+
+        private TextDecoration _decoration;
+
+        public void Add(string text, float x, float baseline, float width, Style style) =>
+            Add(text, x, baseline, width, style.Font, style.Color, style.Decoration);
+
+        public void Add(string text, float x, float baseline, float width, Font font, Rgba color, TextDecoration decoration)
+        {
+            if (_count > 0 && Touches(x, baseline, font, color, decoration))
+            {
+                if (_count == 1)
+                {
+                    _joined.Append(_text);
+                }
+
+                _joined.Append(text);
+                _width += width;
+                _count++;
+                return;
+            }
+
+            End();
+
+            _text = text;
+            _x = x;
+            _baseline = baseline;
+            _width = width;
+            _font = font;
+            _color = color;
+            _decoration = decoration;
+            _count = 1;
+        }
+
+        /// <summary>The spans of the line, and a clean start for the next one.</summary>
+        public LineText[] Close()
+        {
+            End();
+
+            LineText[] texts = [.. _set];
+            _set.Clear();
+
+            return texts;
+        }
+
+        private bool Touches(float x, float baseline, Font font, Rgba color, TextDecoration decoration) =>
+            _font == font
+            && _color == color
+            && _decoration == decoration
+            && Math.Abs(_baseline - baseline) < Tolerance
+            && Math.Abs(_x + _width - x) < Tolerance;
+
+        private void End()
+        {
+            if (_count == 0)
+            {
+                return;
+            }
+
+            _set.Add(new LineText(_count == 1 ? _text : _joined.ToString(), _x, _baseline, _width, _font!, _color, _decoration));
+            _joined.Clear();
+            _count = 0;
+        }
     }
 
     /// <summary>Fills lines first fit: a box goes on the current line if it fits, otherwise it opens the next.</summary>

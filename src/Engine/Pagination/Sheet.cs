@@ -99,21 +99,31 @@ internal sealed class Sheet
         }
     }
 
+    /// <summary>Puts one line on the page: what is painted behind it, its markers, its text and its pictures.</summary>
+    /// <remarks>Index loops rather than four queries, because every line of every page comes through here.</remarks>
     private void PlaceLine(LineFlow line, float top)
     {
-        Boxes.AddRange(line.Boxes.Select(box => new RenderBox(
-            BoxKind.Inline,
-            new Rect(box.X, top + box.Top, box.Width, box.Height),
-            box.Fill,
-            box.Border,
-            Radius: box.Radius)));
+        for (int index = 0; index < line.Boxes.Count; index++)
+        {
+            LineBox box = line.Boxes[index];
+            Boxes.Add(new RenderBox(BoxKind.Inline, new Rect(box.X, top + box.Top, box.Width, box.Height), box.Fill, box.Border, Radius: box.Radius));
+        }
 
-        Boxes.AddRange(line.Marks.Select(mark => BoxOf(mark, top)));
+        for (int index = 0; index < line.Marks.Count; index++)
+        {
+            Boxes.Add(BoxOf(line.Marks[index], top));
+        }
 
-        Spans.AddRange(line.Texts.Select(text =>
-            new TextSpan(text.Text, text.X, top + text.Baseline, text.Width, text.Font, text.Color, text.Decoration)));
+        for (int index = 0; index < line.Texts.Count; index++)
+        {
+            LineText text = line.Texts[index];
+            Spans.Add(new TextSpan(text.Text, text.X, top + text.Baseline, text.Width, text.Font, text.Color, text.Decoration));
+        }
 
-        Images.AddRange(line.Pictures.Select(picture =>
-            new ImageBox(new Rect(picture.X, top + picture.Top, picture.Width, picture.Height), picture.Image, picture.Source)));
+        for (int index = 0; index < line.Pictures.Count; index++)
+        {
+            LinePicture picture = line.Pictures[index];
+            Images.Add(new ImageBox(new Rect(picture.X, top + picture.Top, picture.Width, picture.Height), picture.Image, picture.Source));
+        }
     }
 }

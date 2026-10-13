@@ -1,6 +1,7 @@
 using System.Globalization;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
+using AngleSharp.Css.Parser;
 using AngleSharp.Html.Parser;
 using Snail.Toolkit.HtmlComposer.Engine.Layout;
 using Snail.Toolkit.HtmlComposer.Engine.Styling;
@@ -26,8 +27,10 @@ internal static class Furniture
         PageSetup setup,
         int total,
         Measurements measurements,
-        IImageSource? images,
+        Pictures pictures,
         List<Note> notes,
+        HtmlParser html,
+        CssParser css,
         CancellationToken ct)
     {
         if (setup is { Header: null, Footer: null, Side: null })
@@ -43,9 +46,9 @@ internal static class Furniture
             ? new Rect(setup.Width - setup.Margins.Right, setup.Margins.Top, setup.Margins.Right, column)
             : new Rect(0, setup.Margins.Top, setup.Margins.Left, column);
 
-        Band?[] bands = [Band.Of(setup.Header, header), Band.Of(setup.Footer, footer), Band.Of(setup.Side, side)];
+        Band?[] bands = [Band.Of(setup.Header, header, html, css), Band.Of(setup.Footer, footer, html, css), Band.Of(setup.Side, side, html, css)];
 
-        return [.. pages.Select(page => Framed(page, bands, total, measurements, images, notes, ct))];
+        return [.. pages.Select(page => Framed(page, bands, total, measurements, pictures, notes, ct))];
     }
 
     private static Page Framed(
@@ -53,7 +56,7 @@ internal static class Furniture
         IReadOnlyList<Band?> bands,
         int total,
         Measurements measurements,
-        IImageSource? images,
+        Pictures pictures,
         List<Note> notes,
         CancellationToken ct)
     {
@@ -63,7 +66,7 @@ internal static class Furniture
 
         foreach (Band? band in bands)
         {
-            band?.Set(sheet, page.Number, total, measurements, images, notes, ct);
+            band?.Set(sheet, page.Number, total, measurements, pictures, notes, ct);
         }
 
         return page with
@@ -97,19 +100,19 @@ internal static class Furniture
 
         private readonly List<(IElement Element, string Name, string Value)> _attributes = [];
 
-        private Band(IHtmlDocument document, Rect area)
+        private Band(IHtmlDocument document, Rect area, CssParser css)
         {
             _document = document;
-            _cascade = Cascade.Of(document);
+            _cascade = Cascade.Of(document, css);
             _area = area;
 
             Collect(document);
         }
 
-        public static Band? Of(string? markup, Rect area) =>
-            markup is null ? null : new Band(new HtmlParser().ParseDocument(markup), area);
+        public static Band? Of(string? markup, Rect area, HtmlParser html, CssParser css) =>
+            markup is null ? null : new Band(html.ParseDocument(markup), area, css);
 
-        public void Set(Sheet sheet, int number, int total, Measurements measurements, IImageSource? images, List<Note> notes, CancellationToken ct)
+        public void Set(Sheet sheet, int number, int total, Measurements measurements, Pictures pictures, List<Note> notes, CancellationToken ct)
         {
             foreach ((IText node, string text) in _texts)
             {
@@ -121,7 +124,7 @@ internal static class Furniture
                 element.SetAttribute(name, Numbered(value, number, total));
             }
 
-            BlockFlow flow = Galley.Set(_document, _area, measurements, images, notes, ct, _cascade);
+            BlockFlow flow = Galley.Set(_document, _cascade, _area, measurements, pictures, notes, ct);
 
             sheet.Place(flow, _area.Y + flow.MarginTop);
         }

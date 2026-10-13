@@ -18,6 +18,7 @@ internal static class Press
     public static void Print(Composition composition, Stream output, Faces fonts, PdfOptions options, CancellationToken ct)
     {
         using var pictures = new Decoded();
+        using var ink = new SKPaint { IsAntialias = true };
         using var document = SKDocument.CreatePdf(output, MetadataOf(options));
 
         foreach (Page page in composition.Pages)
@@ -25,7 +26,7 @@ internal static class Press
             ct.ThrowIfCancellationRequested();
 
             SKCanvas canvas = document.BeginPage(page.Width, page.Height);
-            Draw(canvas, page, fonts, pictures);
+            Draw(canvas, page, fonts, pictures, ink);
             document.EndPage();
         }
 
@@ -42,7 +43,7 @@ internal static class Press
         Producer = Producer,
     };
 
-    private static void Draw(SKCanvas canvas, Page page, Faces fonts, Decoded pictures)
+    private static void Draw(SKCanvas canvas, Page page, Faces fonts, Decoded pictures, SKPaint ink)
     {
         foreach (RenderBox? box in page.Boxes.Where(box => box.IsPainted))
         {
@@ -56,7 +57,7 @@ internal static class Press
 
         foreach (TextSpan span in page.Spans)
         {
-            DrawSpan(canvas, span, fonts);
+            DrawSpan(canvas, span, fonts, ink);
         }
     }
 
@@ -163,12 +164,18 @@ internal static class Press
         canvas.DrawImage(picture, RectOf(box.Bounds), sampling, null);
     }
 
-    private static void DrawSpan(SKCanvas canvas, TextSpan span, Faces fonts)
+    /// <summary>Draws a run in its colour, and the rules its decoration asks for.</summary>
+    /// <remarks>
+    /// One paint serves every run of the document, given each run's colour in turn: a paint made and released
+    /// for every run, and the face's metrics read for every run whether it had a rule to draw or not, were
+    /// native calls by the thousand for a long document, and the file records the colour of a run, not which
+    /// paint carried it.
+    /// </remarks>
+    private static void DrawSpan(SKCanvas canvas, TextSpan span, Faces fonts, SKPaint ink)
     {
         SKFont font = fonts.For(span.Font);
-        SKFontMetrics metrics = font.Metrics;
-        float thickness = metrics.UnderlineThickness ?? (span.Font.Size / 16);
-        using var ink = new SKPaint { Color = ColorOf(span.Color), IsAntialias = true };
+
+        ink.Color = ColorOf(span.Color);
 
         if (span.Font.Tracking == 0)
         {
@@ -178,6 +185,14 @@ internal static class Press
         {
             DrawTracked(canvas, span, font, ink);
         }
+
+        if (!span.Decoration.HasFlag(TextDecoration.Underline) && !span.Decoration.HasFlag(TextDecoration.LineThrough))
+        {
+            return;
+        }
+
+        SKFontMetrics metrics = font.Metrics;
+        float thickness = metrics.UnderlineThickness ?? (span.Font.Size / 16);
 
         if (span.Decoration.HasFlag(TextDecoration.Underline))
         {

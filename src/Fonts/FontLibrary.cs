@@ -34,7 +34,7 @@ public sealed class FontLibrary : IDisposable
         {
             ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-            return [.. _faces.Select(face => face.Typeface.FamilyName).Distinct(StringComparer.OrdinalIgnoreCase)];
+            return [.. _faces.Select(face => face.Family).Distinct(StringComparer.OrdinalIgnoreCase)];
         }
     }
 
@@ -126,7 +126,7 @@ public sealed class FontLibrary : IDisposable
         return Chosen(fonts)
             .Where(face => !face.HasCffOutlines)
             .Select(face => new EmbeddedFace(
-                face.Typeface.FamilyName,
+                face.Family,
                 face.Typeface.FontWeight >= 600,
                 face.IsItalic,
                 face.Data.ToArray()));
@@ -139,7 +139,7 @@ public sealed class FontLibrary : IDisposable
 
         return Chosen(fonts)
             .Where(face => face.HasCffOutlines)
-            .Select(face => face.Typeface.FamilyName)
+            .Select(face => face.Family)
             .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -164,7 +164,7 @@ public sealed class FontLibrary : IDisposable
             yield return new Note(
                 NoteKind.FamilySubstituted,
                 font.Family,
-                $"None of the families {font.Family} is loaded; the text is set in \"{_faces[0].Typeface.FamilyName}\" instead.");
+                $"None of the families {font.Family} is loaded; the text is set in \"{_faces[0].Family}\" instead.");
         }
 
         IEnumerable<Match> bold = fonts.Where(font => font.IsBold).Select(Resolve).Where(match => match.Typeface.FontWeight < 600);
@@ -180,7 +180,7 @@ public sealed class FontLibrary : IDisposable
         var used = fonts.Select(font => Resolve(font).Typeface).ToHashSet();
         IEnumerable<Face> outlined = _faces.Where(face => face.HasCffOutlines && used.Contains(face.Typeface));
 
-        foreach (string? family in outlined.Select(face => face.Typeface.FamilyName).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string? family in outlined.Select(face => face.Family).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             yield return new Note(
                 NoteKind.CffOutlines,
@@ -224,7 +224,7 @@ public sealed class FontLibrary : IDisposable
             throw new ArgumentException($"{origin} holds no font that can be read.");
         }
 
-        _faces.Add(new Face(typeface, data, HasCffOutlinesIn(content)));
+        _faces.Add(new Face(typeface, typeface.FamilyName, data, HasCffOutlinesIn(content)));
 
         return this;
     }
@@ -241,11 +241,11 @@ public sealed class FontLibrary : IDisposable
             }
         }
 
-        return _faces.Count == 0 ? [] : FacesNamed(_faces[0].Typeface.FamilyName);
+        return _faces.Count == 0 ? [] : FacesNamed(_faces[0].Family);
     }
 
     private List<Face> FacesNamed(string family) =>
-        [.. _faces.Where(face => face.Typeface.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase))];
+        [.. _faces.Where(face => face.Family.Equals(family, StringComparison.OrdinalIgnoreCase))];
 
     private bool IsAvailable(string family) => GenericFamilies.Contains(family) || FacesNamed(family).Count > 0;
 
@@ -254,7 +254,13 @@ public sealed class FontLibrary : IDisposable
     /// <summary>A face a document can carry inside itself: what it is, and the bytes it was loaded from.</summary>
     public readonly record struct EmbeddedFace(string Family, bool IsBold, bool IsItalic, byte[] Content);
 
-    private sealed record Face(SKTypeface Typeface, SKData Data, bool HasCffOutlines) : IDisposable
+    /// <summary>A loaded face, with its family name read once.</summary>
+    /// <remarks>
+    /// A typeface tells its family name through Skia, as a native string the collector has to finalize, and
+    /// every font a document resolved asked it of every loaded face: a hundred and more finalizers for a
+    /// three-page report. The name of a face never changes, so it is read when the face is loaded.
+    /// </remarks>
+    private sealed record Face(SKTypeface Typeface, string Family, SKData Data, bool HasCffOutlines) : IDisposable
     {
         public bool IsItalic => Typeface.FontSlant != SKFontStyleSlant.Upright;
 

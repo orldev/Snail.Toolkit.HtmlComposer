@@ -43,6 +43,7 @@ internal static class Deck
         SlideLayoutPart layoutPart = masterPart.SlideLayoutParts.First();
         var slides = new P.SlideIdList();
         var pictures = new Pictures();
+        var typefaces = new Typefaces(fonts);
         uint number = 256;
 
         foreach (Page page in composition.Pages)
@@ -52,7 +53,7 @@ internal static class Deck
             SlidePart slidePart = presentationPart.AddNewPart<SlidePart>();
 
             slidePart.Slide = new P.Slide(
-                new P.CommonSlideData(TreeOf(page, slidePart, fonts, pictures, options.Language)) { Background = Paper() },
+                new P.CommonSlideData(TreeOf(page, slidePart, typefaces, pictures, options.Language)) { Background = Paper() },
                 new P.ColorMapOverride(new A.MasterColorMapping()));
 
             slidePart.AddPart(layoutPart);
@@ -252,7 +253,7 @@ internal static class Deck
             new P.ApplicationNonVisualDrawingProperties()),
         new P.GroupShapeProperties(new A.TransformGroup()));
 
-    private static P.ShapeTree TreeOf(Page page, SlidePart part, Faces fonts, Pictures pictures, string? language)
+    private static P.ShapeTree TreeOf(Page page, SlidePart part, Typefaces typefaces, Pictures pictures, string? language)
     {
         ShapeTree tree = Tree();
         uint id = 2;
@@ -272,7 +273,7 @@ internal static class Deck
 
         foreach (TextSpan span in page.Spans)
         {
-            tree.Append(SpanOf(span, fonts, id++, language));
+            tree.Append(SpanOf(span, typefaces, id++, language));
         }
 
         return tree;
@@ -385,10 +386,9 @@ internal static class Deck
     private static int Share(float part, float whole) =>
         whole <= 0 ? 0 : Math.Clamp((int)Math.Round(part / whole * PerCent), 0, PerCent);
 
-    private static P.Shape SpanOf(TextSpan span, Faces fonts, uint id, string? language)
+    private static P.Shape SpanOf(TextSpan span, Typefaces typefaces, uint id, string? language)
     {
-        FontMetrics metrics = fonts.MetricsOf(span.Font);
-        string face = fonts.For(span.Font).Typeface.FamilyName;
+        (FontMetrics metrics, string face) = typefaces.Of(span.Font);
         var shape = new P.Shape(
             new P.NonVisualShapeProperties(
                 new P.NonVisualDrawingProperties { Id = id, Name = $"text{id}" },
@@ -474,6 +474,30 @@ internal static class Deck
     };
 
     private static long Emu(float points) => (long)Math.Round(points * EmuPerPoint);
+
+    /// <summary>The name and the height of each font of one deck, asked of the faces once per font.</summary>
+    /// <remarks>
+    /// A typeface tells its family name through Skia, as a native string the collector has to finalize, and the
+    /// deck asked for it on every run: 1 894 names, and as many finalizers, for forty pages set in one font.
+    /// Neither the name nor the metrics change within a document, so each font is asked once.
+    /// </remarks>
+    private sealed class Typefaces(Faces fonts)
+    {
+        private readonly Dictionary<Engine.Font, (FontMetrics Metrics, string Face)> _known = [];
+
+        public (FontMetrics Metrics, string Face) Of(Engine.Font font)
+        {
+            if (_known.TryGetValue(font, out (FontMetrics Metrics, string Face) known))
+            {
+                return known;
+            }
+
+            known = (fonts.MetricsOf(font), fonts.For(font).Typeface.FamilyName);
+            _known[font] = known;
+
+            return known;
+        }
+    }
 
     /// <summary>Every picture of one deck, stored once however many slides show it.</summary>
     /// <remarks>

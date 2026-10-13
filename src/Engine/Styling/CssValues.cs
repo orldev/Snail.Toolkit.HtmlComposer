@@ -21,12 +21,17 @@ internal static class CssValues
         ("q", Points.PerInch / 101.6f),
     ];
 
-    public static float? ReadNumber(string text) =>
-        float.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float number) ? number : null;
+    public static float? ReadNumber(string text) => ReadNumber(text.AsSpan());
 
+    /// <summary>A length in points, or a percentage, as a declaration states it.</summary>
+    /// <remarks>
+    /// Read on spans, with the units tried in a fixed order — <c>rem</c> before <c>em</c>, which it ends with —
+    /// rather than through an array of eleven units built per call and a substring per unit tried: every
+    /// margin, padding and border of every element is read here.
+    /// </remarks>
     public static Length? ReadLength(string text, float fontSize, float rootFontSize)
     {
-        string value = text.Trim();
+        ReadOnlySpan<char> value = text.AsSpan().Trim();
 
         if (value.EndsWith('%'))
         {
@@ -38,17 +43,19 @@ internal static class CssValues
             return unitless == 0 ? new Length(0) : null;
         }
 
-        foreach ((string? unit, float points) in UnitsOf(fontSize, rootFontSize))
-        {
-            if (value.EndsWith(unit, StringComparison.OrdinalIgnoreCase) && ReadNumber(value[..^unit.Length]) is { } number)
-            {
-                return new Length(number * points);
-            }
-        }
-
-        return null;
+        return Scaled(value, "rem", rootFontSize)
+            ?? Scaled(value, "em", fontSize)
+            ?? Scaled(value, "ex", fontSize / 2)
+            ?? Scaled(value, "ch", fontSize / 2)
+            ?? Absolute(value);
     }
 
+    /// <summary>A colour as a declaration states it, or nothing when it cannot be read.</summary>
+    /// <remarks>
+    /// AngleSharp states a colour as <c>rgba(r, g, b, a)</c>, and every colour, background and border of every
+    /// element is read here. The channels are split and read on spans, where a substring and an array of
+    /// strings were made for every colour.
+    /// </remarks>
     public static Rgba? ReadColor(string text, Rgba current)
     {
         string value = text.Trim();
@@ -74,31 +81,45 @@ internal static class CssValues
             return null;
         }
 
-        string[] channels = value[(open + 1)..^1].Split([',', ' ', '/'], StringSplitOptions.RemoveEmptyEntries);
-        if (channels.Length < 3)
+        ReadOnlySpan<char> inner = value.AsSpan()[(open + 1)..^1];
+        Span<Range> channels = stackalloc Range[5];
+        int count = inner.SplitAny(channels, ", /", StringSplitOptions.RemoveEmptyEntries);
+        if (count < 3)
         {
             return null;
         }
 
-        byte alpha = channels.Length > 3 ? ReadAlpha(channels[3]) : (byte)255;
+        byte alpha = count > 3 ? ReadAlpha(inner[channels[3]]) : (byte)255;
 
-        return new Rgba(ReadChannel(channels[0]), ReadChannel(channels[1]), ReadChannel(channels[2]), alpha);
+        return new Rgba(ReadChannel(inner[channels[0]]), ReadChannel(inner[channels[1]]), ReadChannel(inner[channels[2]]), alpha);
     }
 
-    private static IEnumerable<(string Unit, float Points)> UnitsOf(float fontSize, float rootFontSize) =>
-    [
-        ("rem", rootFontSize),
-        ("em", fontSize),
-        ("ex", fontSize / 2),
-        ("ch", fontSize / 2),
-        .. AbsoluteUnits,
-    ];
+    private static float? ReadNumber(ReadOnlySpan<char> text) =>
+        float.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float number) ? number : null;
 
-    private static byte ReadChannel(string text) =>
-        text.EndsWith('%') ? Clamp((ReadNumber(text[..^1]) ?? 0) * 255f / 100f) : Clamp(ReadNumber(text) ?? 0);
+    private static Length? Scaled(ReadOnlySpan<char> value, string unit, float points) =>
+        value.EndsWith(unit, StringComparison.OrdinalIgnoreCase) && ReadNumber(value[..^unit.Length]) is { } number
+            ? new Length(number * points)
+            : null;
 
-    private static byte ReadAlpha(string text) =>
-        text.EndsWith('%') ? Clamp((ReadNumber(text[..^1]) ?? 100) * 255f / 100f) : Clamp((ReadNumber(text) ?? 1) * 255f);
+    private static Length? Absolute(ReadOnlySpan<char> value)
+    {
+        foreach ((string unit, float points) in AbsoluteUnits)
+        {
+            if (Scaled(value, unit, points) is { } length)
+            {
+                return length;
+            }
+        }
+
+        return null;
+    }
+
+    private static byte ReadChannel(ReadOnlySpan<char> text) =>
+        text is [.., '%'] ? Clamp((ReadNumber(text[..^1]) ?? 0) * 255f / 100f) : Clamp(ReadNumber(text) ?? 0);
+
+    private static byte ReadAlpha(ReadOnlySpan<char> text) =>
+        text is [.., '%'] ? Clamp((ReadNumber(text[..^1]) ?? 100) * 255f / 100f) : Clamp((ReadNumber(text) ?? 1) * 255f);
 
     private static byte Clamp(float value) => (byte)Math.Clamp(MathF.Round(value), 0, 255);
 
