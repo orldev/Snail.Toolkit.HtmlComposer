@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Snail.Toolkit.HtmlComposer.Fonts.Tests;
 
 /// <summary>
@@ -6,9 +8,9 @@ namespace Snail.Toolkit.HtmlComposer.Fonts.Tests;
 /// </summary>
 public sealed class LocalPicturesTests : IDisposable
 {
-    private readonly string _root = Directory.CreateTempSubdirectory("composer-fence").FullName;
+    private readonly string _root = Folder();
 
-    private readonly string _outside = Directory.CreateTempSubdirectory("composer-outside").FullName;
+    private readonly string _outside = Folder();
 
     public void Dispose()
     {
@@ -127,6 +129,23 @@ public sealed class LocalPicturesTests : IDisposable
         }
 
         Assert.Null(new LocalPictures(_root).Load("logo.png"));
+    }
+
+    /// <summary>A new folder named as Snail.Sdk.Mcp.Testing names a test's, so a cleaner can prove a crashed run's is a leftover.</summary>
+    /// <remarks>
+    /// <c>s3l-test-&lt;pid&gt;-&lt;start&gt;-&lt;random&gt;</c>, the start in Unix seconds as the system reports it: the tests of a
+    /// library do not reference the package, so they name the folder themselves, as the standard asks of a project without
+    /// it. <see cref="Dispose"/> deletes it when the test ends.
+    /// </remarks>
+    private static string Folder()
+    {
+        using var process = Process.GetCurrentProcess();
+        long start = new DateTimeOffset(process.StartTime.ToUniversalTime()).ToUnixTimeSeconds();
+        string folder = Path.Combine(Path.GetTempPath(), $"s3l-test-{Environment.ProcessId}-{start}-{Path.GetRandomFileName()[..8]}");
+
+        Directory.CreateDirectory(folder);
+
+        return folder;
     }
 
     /// <summary>Whether this user is actually held off the file, which root never is.</summary>

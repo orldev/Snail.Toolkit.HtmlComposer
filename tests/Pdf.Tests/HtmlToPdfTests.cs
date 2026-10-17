@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using SkiaSharp;
 using Snail.Toolkit.HtmlComposer.Engine;
@@ -255,7 +256,7 @@ public sealed class HtmlToPdfTests : IDisposable
     /// <summary>A folder of its own for one test, removed with everything in it afterwards.</summary>
     private sealed class Scratch : IDisposable
     {
-        private readonly DirectoryInfo _folder = Directory.CreateTempSubdirectory("html-composer-");
+        private readonly DirectoryInfo _folder = new(Folder());
 
         public string Root => _folder.FullName;
 
@@ -267,5 +268,22 @@ public sealed class HtmlToPdfTests : IDisposable
         }
 
         public void Dispose() => _folder.Delete(recursive: true);
+
+        /// <summary>A new folder named as Snail.Sdk.Mcp.Testing names a test's, so a cleaner can prove a crashed run's is a leftover.</summary>
+        /// <remarks>
+        /// <c>s3l-test-&lt;pid&gt;-&lt;start&gt;-&lt;random&gt;</c>, the start in Unix seconds as the system reports it: the tests of a
+        /// library do not reference the package, so they name the folder themselves, as the standard asks of a project without
+        /// it. <see cref="Dispose"/> deletes it when the test ends.
+        /// </remarks>
+        private static string Folder()
+        {
+            using var process = Process.GetCurrentProcess();
+            long start = new DateTimeOffset(process.StartTime.ToUniversalTime()).ToUnixTimeSeconds();
+            string folder = Path.Combine(Path.GetTempPath(), $"s3l-test-{Environment.ProcessId}-{start}-{Path.GetRandomFileName()[..8]}");
+
+            Directory.CreateDirectory(folder);
+
+            return folder;
+        }
     }
 }
