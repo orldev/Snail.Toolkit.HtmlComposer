@@ -12,6 +12,10 @@ internal static class Typeset
     public static Composition Html(string html, IImageSource? images = null) =>
         new Typesetter(new FixedPitch(), images).Compose(html, Sheet);
 
+    /// <summary>Sets markup with its text and tables kept as structure, as a deck asks for them.</summary>
+    public static Composition Structured(string html, IImageSource? images = null) =>
+        new Typesetter(new FixedPitch(), images) { IsStructured = true }.Compose(html, Sheet);
+
     public static string Numbered(int count, string prefix = "line") =>
         string.Join("<br>", Enumerable.Range(1, count).Select(number => $"{prefix}{number}"));
 

@@ -15,7 +15,7 @@ internal static class Paginator
 {
     private const float Tolerance = 0.01f;
 
-    public static IReadOnlyList<Page> Paginate(BlockFlow galley, PageSetup setup, int first, CancellationToken ct)
+    public static IReadOnlyList<Page> Paginate(BlockFlow galley, PageSetup setup, int first, bool isStructured, CancellationToken ct)
     {
         Rect content = setup.Content;
         List<Page> pages = [];
@@ -28,17 +28,41 @@ internal static class Paginator
             float top = remaining.MarginTop;
             Cut cut = Split(remaining, content.Height - top, mustProgress: true);
 
-            if (cut.Head is not { } head || ReferenceEquals(cut.Tail, remaining))
+            if (cut.Head is not { } head || ReferenceEquals(cut.Tail, remaining) || MovesNothing(head))
             {
                 throw new InvalidOperationException(
                     "A page that has to make progress took nothing from the document, which no markup can ask for.");
             }
 
-            pages.Add(Paint(head, content.Y + top, setup, first + pages.Count));
+            pages.Add(Paint(head, content.Y + top, setup, first + pages.Count, isStructured));
             remaining = cut.Tail as BlockFlow;
         }
 
         return pages;
+    }
+
+    /// <summary>Whether a page holds nothing but the heading its block sets again where it resumes.</summary>
+    /// <remarks>
+    /// Such a page has moved nothing: its tail is the same heading in front of everything still waiting — a new
+    /// object, so a check by reference took it for progress, and a resumed heading before a forced break filled
+    /// pages for as long as memory lasted. It is the paginator's own promise that this cannot happen, so it is
+    /// checked as one, and failing it is a bug rather than something markup can ask for.
+    /// </remarks>
+    private static bool MovesNothing(Flow head) =>
+        head is BlockFlow { IsSplitAbove: true } block && block.Children.Count > 0 && block.Children.Count <= Resumed(block);
+
+    /// <summary>How many children a fragment opens with that are its block's resumed heading, set again by the cut.</summary>
+    private static int Resumed(BlockFlow block)
+    {
+        IReadOnlyList<Flow> heading = block.Frame.Resumed;
+        int at = 0;
+
+        while (at < heading.Count && at < block.Children.Count && ReferenceEquals(block.Children[at], heading[at]))
+        {
+            at++;
+        }
+
+        return at;
     }
 
     private static Cut Split(Flow flow, float available, bool mustProgress) => flow switch
@@ -95,7 +119,7 @@ internal static class Paginator
         List<BlockFlow> tails =
         [
             .. cuts.Select((cut, column) => Half(
-                (cut.Tail as BlockFlow)?.Headed() ?? Continues(row.Cells[column]),
+                cut.Tail as BlockFlow ?? Continues(row.Cells[column]),
                 tail,
                 isSplitAbove: true)),
         ];
@@ -176,7 +200,7 @@ internal static class Paginator
         }
 
         IReadOnlyList<Flow> children = block.Children;
-        int opening = Opening(children);
+        int opening = Opening(block);
         float room = available - block.Head - reserve;
         float used = 0;
         float pending = 0;
@@ -195,7 +219,7 @@ internal static class Paginator
 
             if (child.Height > space + Tolerance || child.HasForcedBreakInside)
             {
-                return BreakAt(block, index, space, mustProgress);
+                return BreakAt(block, index, space, mustProgress, opening);
             }
 
             used += gap + child.Height;
@@ -213,14 +237,15 @@ internal static class Paginator
     /// <summary>How many children a fragment opens with that it did not choose: the heading set again above it.</summary>
     /// <remarks>
     /// A forced break moves its child to the head of what follows, and the check that a break has already been
-    /// honoured is that the child now stands first. Repeating a table heading above it breaks that: the row
-    /// lands second, asks for a page again, and the document multiplies pages one heading at a time. Counting
-    /// the heading out restores the reckoning for tables without changing it for anything else, which opens
-    /// with nothing.
+    /// honoured is that the child now stands first. Repeating a heading above it breaks that: the child lands
+    /// second, asks for a page again, and the document multiplies pages one heading at a time. Two headings are
+    /// set again — a table's head rows and a block's resumed heading — and both are counted out; anything else
+    /// opens with nothing.
     /// </remarks>
-    private static int Opening(IReadOnlyList<Flow> children)
+    private static int Opening(BlockFlow block)
     {
-        int at = 0;
+        IReadOnlyList<Flow> children = block.Children;
+        int at = Resumed(block);
 
         while (at < children.Count && children[at] is RowFlow { IsHeader: true })
         {
@@ -230,9 +255,14 @@ internal static class Paginator
         return at;
     }
 
-    private static Cut BreakAt(BlockFlow block, int index, float space, bool mustProgress)
+    /// <summary>Breaks a block at a child that does not fit, or as far above it as the rules allow.</summary>
+    /// <remarks>
+    /// The first child the fragment chose — the one after any heading set again — is the one that has to be
+    /// placed when the page must make progress, and a break no lower than the heading is no break at all.
+    /// </remarks>
+    private static Cut BreakAt(BlockFlow block, int index, float space, bool mustProgress, int opening)
     {
-        Cut cut = Split(block.Children[index], space, mustProgress && index == 0);
+        Cut cut = Split(block.Children[index], space, mustProgress && index <= opening);
 
         if (cut.Head is not null)
         {
@@ -241,9 +271,9 @@ internal static class Paginator
 
         int preferred = block.Children[index] is LineFlow ? KeepLines(block, index) : Backtrack(block.Children, index);
 
-        return (preferred, mustProgress) switch
+        return (preferred > opening, mustProgress) switch
         {
-            ( > 0, _) => Divide(block, preferred, isForced: false),
+            (true, _) => Divide(block, preferred, isForced: false),
             (_, false) => new Cut(null, block),
             _ => Divide(block, index, isForced: false),
         };
@@ -288,8 +318,10 @@ internal static class Paginator
         IReadOnlyList<Flow> moved = Continued(block.Children, at);
         BlockFlow head = block.With([.. block.Children.Take(at)], block.MarginTop, 0, block.IsSplitAbove, isSplitBelow: true);
         BlockFlow tail = block.With(isForced ? moved : WithoutLeadingMargin(moved), 0, block.MarginBottom, isSplitAbove: true, block.IsSplitBelow);
+        int resumed = Resumed(block);
+        bool isInHeading = resumed > 0 && at <= resumed;
 
-        return new Cut(head, tail.Headed());
+        return new Cut(head, isInHeading ? tail : tail.Headed());
     }
 
     private static Cut Divide(BlockFlow block, int index, Cut inner)
@@ -297,8 +329,9 @@ internal static class Paginator
         IReadOnlyList<Flow> moved = [.. Heading(block.Children, index + 1), inner.Tail!, .. block.Children.Skip(index + 1)];
         BlockFlow head = block.With([.. block.Children.Take(index), inner.Head!], block.MarginTop, 0, block.IsSplitAbove, isSplitBelow: true);
         BlockFlow tail = block.With(moved, 0, block.MarginBottom, isSplitAbove: true, block.IsSplitBelow);
+        bool isInHeading = index < Resumed(block);
 
-        return new Cut(head, tail.Headed());
+        return new Cut(head, isInHeading ? tail : tail.Headed());
     }
 
     /// <summary>What moves to the next page, with the header rows of a table repeated above it.</summary>
@@ -329,9 +362,9 @@ internal static class Paginator
             block.IsSplitAbove,
             block.IsSplitBelow);
 
-    private static Page Paint(Flow flow, float top, PageSetup setup, int number)
+    private static Page Paint(Flow flow, float top, PageSetup setup, int number, bool isStructured)
     {
-        var sheet = new Sheet();
+        var sheet = new Sheet(isStructured);
 
         if (setup.Background is { IsVisible: true } background)
         {
@@ -340,7 +373,11 @@ internal static class Paginator
 
         sheet.Place(flow, top);
 
-        return new Page(number, setup.Width, setup.Height, sheet.Boxes, sheet.Images, sheet.Spans);
+        return new Page(number, setup.Width, setup.Height, sheet.Boxes, sheet.Images, sheet.Spans)
+        {
+            Texts = sheet.Texts,
+            Tables = sheet.Tables,
+        };
     }
 
     private readonly record struct Cut(Flow? Head, Flow? Tail);

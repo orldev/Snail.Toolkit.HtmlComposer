@@ -31,6 +31,7 @@ internal static class Furniture
         List<Note> notes,
         HtmlParser html,
         CssParser css,
+        bool isStructured,
         CancellationToken ct)
     {
         if (setup is { Header: null, Footer: null, Side: null })
@@ -48,7 +49,7 @@ internal static class Furniture
 
         Band?[] bands = [Band.Of(setup.Header, header, html, css), Band.Of(setup.Footer, footer, html, css), Band.Of(setup.Side, side, html, css)];
 
-        return [.. pages.Select(page => Framed(page, bands, total, measurements, pictures, notes, ct))];
+        return [.. pages.Select(page => Framed(page, bands, total, measurements, pictures, notes, isStructured, ct))];
     }
 
     private static Page Framed(
@@ -58,11 +59,12 @@ internal static class Furniture
         Measurements measurements,
         Pictures pictures,
         List<Note> notes,
+        bool isStructured,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        var sheet = new Sheet();
+        var sheet = new Sheet(isStructured);
 
         foreach (Band? band in bands)
         {
@@ -74,6 +76,7 @@ internal static class Furniture
             Boxes = [.. page.Boxes, .. sheet.Boxes],
             Images = [.. page.Images, .. sheet.Images],
             Spans = [.. page.Spans, .. sheet.Spans],
+            Running = new Running(sheet.Boxes, sheet.Images, sheet.Spans) { Texts = sheet.Texts, Tables = sheet.Tables },
         };
     }
 
@@ -87,6 +90,12 @@ internal static class Furniture
     /// The numbers are written into the text nodes and the attribute values that hold a token, page by page,
     /// and the same document is set again. The elements do not change, so the cascade's decisions stay
     /// good; only the widths do, which the galley measures afresh each time.
+    /// <para>
+    /// A token in text is first given an element of its own, before the cascade is decided, so that the run
+    /// it becomes says it is the page number or the page count: a deck draws its own slide number in its place,
+    /// one that follows the slides as they are moved. The element is no tag a style sheet would name, and it
+    /// is inline, so the line is set exactly as it was when the number stood in the text itself.
+    /// </para>
     /// </remarks>
     private sealed class Band
     {
@@ -103,10 +112,11 @@ internal static class Furniture
         private Band(IHtmlDocument document, Rect area, CssParser css)
         {
             _document = document;
-            _cascade = Cascade.Of(document, css);
             _area = area;
 
             Collect(document);
+
+            _cascade = Cascade.Of(document, css);
         }
 
         public static Band? Of(string? markup, Rect area, HtmlParser html, CssParser css) =>
@@ -131,11 +141,20 @@ internal static class Furniture
 
         private void Collect(INode node)
         {
-            foreach (INode child in node.ChildNodes)
+            foreach (INode child in node.ChildNodes.ToList())
             {
                 if (child is IText text && HasToken(text.Data))
                 {
-                    _texts.Add((text, text.Data));
+                    if (node is IElement { LocalName: "style" or "script" or "title" })
+                    {
+                        _texts.Add((text, text.Data));
+                    }
+                    else
+                    {
+                        Mark(text);
+                    }
+
+                    continue;
                 }
 
                 if (child is IElement element)
@@ -144,6 +163,46 @@ internal static class Furniture
                     Collect(element);
                 }
             }
+        }
+
+        /// <summary>Gives every token in a text an element of its own, holding the token, and keeps those texts to number.</summary>
+        private void Mark(IText text)
+        {
+            string data = text.Data;
+            INode parent = text.Parent!;
+            int at = 0;
+
+            while (at < data.Length)
+            {
+                int page = data.IndexOf(PageToken, at, StringComparison.Ordinal);
+                int pages = data.IndexOf(PagesToken, at, StringComparison.Ordinal);
+                int next = page < 0 ? pages : pages < 0 ? page : Math.Min(page, pages);
+
+                if (next < 0)
+                {
+                    parent.InsertBefore(_document.CreateTextNode(data[at..]), text);
+                    break;
+                }
+
+                string token = next == page ? PageToken : PagesToken;
+
+                if (next > at)
+                {
+                    parent.InsertBefore(_document.CreateTextNode(data[at..next]), text);
+                }
+
+                IElement field = _document.CreateElement(Galley.FieldTag);
+                IText number = _document.CreateTextNode(token);
+
+                field.SetAttribute(Galley.FieldKind, token == PageToken ? "page" : "pages");
+                field.AppendChild(number);
+                parent.InsertBefore(field, text);
+                _texts.Add((number, token));
+
+                at = next + token.Length;
+            }
+
+            parent.RemoveChild(text);
         }
 
         private static bool HasToken(string text) =>

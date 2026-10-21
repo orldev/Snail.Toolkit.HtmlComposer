@@ -180,7 +180,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
 
     private static bool IsPainted(Style style) => style.Background is { IsVisible: true } || style.Border.IsVisible;
 
-    private LineFlow Build(IReadOnlyList<Token> tokens, Style block, float left, float available, bool isJustifiable, Marker? marker, float contentLeft)
+    private LineFlow Build(IReadOnlyList<Token> tokens, Style block, float left, float available, LineEnd end, Marker? marker, float contentLeft)
     {
         (float ascent, float descent) = Extent(tokens, block, marker);
         double used = 0;
@@ -193,7 +193,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         }
 
         float slack = available - (float)used;
-        bool isJustified = isJustifiable && block.TextAlign == TextAlign.Justify && glues > 0 && slack > 0;
+        bool isJustified = end is LineEnd.Space or LineEnd.Word && block.TextAlign == TextAlign.Justify && glues > 0 && slack > 0;
         float stretch = isJustified ? slack / glues : 0;
         float cursor = left + (isJustified ? 0 : Offset(block.TextAlign, Math.Max(0, slack)));
 
@@ -211,7 +211,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             cursor = Set(tokens[index], cursor, ascent, stretch, pictures, boxes);
         }
 
-        return new LineFlow(ascent + descent, _texts.Close(), pictures, marks, boxes);
+        return new LineFlow(ascent + descent, _texts.Close(), pictures, marks, boxes) { End = end, Align = block.TextAlign };
     }
 
     private void Hang(Marker marker, float contentLeft, float baseline, List<LineMark> marks)
@@ -226,7 +226,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         }
 
         float width = measurements.Measure(marker.Text, font);
-        _texts.Add(marker.Text, right - width, baseline, width, font, marker.Style.Color, TextDecoration.None);
+        _texts.Add(marker.Text, right - width, baseline, width, font, marker.Style.Color, TextDecoration.None, isMarker: true);
     }
 
     /// <summary>How far the line reaches above and below its baseline: the most any of its runs asks for.</summary>
@@ -286,12 +286,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
     /// third up are the usual ones, and they are taken from the run's own size rather than its parent's, so a
     /// smaller face raised in a larger one moves by its own measure.
     /// </remarks>
-    private static float Shift(Style style) => style.VerticalAlign switch
-    {
-        VerticalAlign.Sub => style.Font.Size * 0.2f,
-        VerticalAlign.Super => style.Font.Size * -0.33f,
-        _ => 0,
-    };
+    private static float Shift(Style style) => style.Shift;
 
     /// <summary>How far above the baseline the top of a picture sits, by its <c>vertical-align</c>.</summary>
     /// <remarks>
@@ -353,12 +348,16 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
 
         private TextDecoration _decoration;
 
-        public void Add(string text, float x, float baseline, float width, Style style) =>
-            Add(text, x, baseline, width, style.Font, style.Color, style.Decoration);
+        private TextField _field;
 
-        public void Add(string text, float x, float baseline, float width, Font font, Rgba color, TextDecoration decoration)
+        private bool _isMarker;
+
+        public void Add(string text, float x, float baseline, float width, Style style) =>
+            Add(text, x, baseline, width, style.Font, style.Color, style.Decoration, style.Field);
+
+        public void Add(string text, float x, float baseline, float width, Font font, Rgba color, TextDecoration decoration, TextField field = TextField.None, bool isMarker = false)
         {
-            if (_count > 0 && Touches(x, baseline, font, color, decoration))
+            if (_count > 0 && !isMarker && !_isMarker && Touches(x, baseline, font, color, decoration, field))
             {
                 if (_count == 1)
                 {
@@ -368,6 +367,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
                 _joined.Append(text);
                 _width += width;
                 _count++;
+
                 return;
             }
 
@@ -380,6 +380,8 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             _font = font;
             _color = color;
             _decoration = decoration;
+            _field = field;
+            _isMarker = isMarker;
             _count = 1;
         }
 
@@ -394,8 +396,9 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             return texts;
         }
 
-        private bool Touches(float x, float baseline, Font font, Rgba color, TextDecoration decoration) =>
-            _font == font
+        private bool Touches(float x, float baseline, Font font, Rgba color, TextDecoration decoration, TextField field) =>
+            _field == field
+            && _font == font
             && _color == color
             && _decoration == decoration
             && Math.Abs(_baseline - baseline) < Tolerance
@@ -408,7 +411,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
                 return;
             }
 
-            _set.Add(new LineText(_count == 1 ? _text : _joined.ToString(), _x, _baseline, _width, _font!, _color, _decoration));
+            _set.Add(new LineText(_count == 1 ? _text : _joined.ToString(), _x, _baseline, _width, _font!, _color, _decoration) { Field = _field, IsMarker = _isMarker });
             _joined.Clear();
             _count = 0;
         }
@@ -437,7 +440,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
                     _pending ??= glue;
                     break;
                 case Forced:
-                    Finish(isJustifiable: false);
+                    Finish(LineEnd.Forced);
                     break;
                 case Box box:
                     Place(box);
@@ -449,7 +452,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
         {
             if (_line.Count > 0)
             {
-                Finish(isJustifiable: false);
+                Finish(LineEnd.Last);
             }
 
             return _lines;
@@ -461,7 +464,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
 
             if (_line.Count > 0 && _used + needed > Available + Tolerance)
             {
-                Finish(isJustifiable: true);
+                Finish(_pending is null ? LineEnd.Word : LineEnd.Space);
             }
 
             if (_line.Count == 0 && box.Width > Available + Tolerance && box.IsBreakable)
@@ -479,7 +482,7 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             {
                 if (_line.Count > 0)
                 {
-                    Finish(isJustifiable: false);
+                    Finish(LineEnd.Cut);
                 }
 
                 Append(chunk);
@@ -499,10 +502,10 @@ internal sealed class LineBreaker(Measurements measurements, CancellationToken c
             _pending = null;
         }
 
-        private void Finish(bool isJustifiable)
+        private void Finish(LineEnd end)
         {
             Marker? lineMarker = _lines.Count == 0 ? marker : null;
-            _lines.Add(breaker.Build(_line, block, x + Indent, Available, isJustifiable, lineMarker, x));
+            _lines.Add(breaker.Build(_line, block, x + Indent, Available, end, lineMarker, x));
             _line.Clear();
             _used = 0;
             _pending = null;

@@ -103,7 +103,8 @@ public sealed class HtmlToPptxTests : IDisposable
     /// <remarks>
     /// Each page reads the picture again, so the same bytes arrive as a different object every time. Stored
     /// per slide, a logo would weigh as much as the deck has pages — the very reason the PDF press keeps one
-    /// decoded copy per document.
+    /// decoded copy per document. A running head now goes onto the slide layout, so the one copy is the
+    /// layout's and the slides carry none.
     /// </remarks>
     [Fact]
     public void Convert_PictureOnEverySlide_StoresItOnce()
@@ -116,10 +117,14 @@ public sealed class HtmlToPptxTests : IDisposable
         Composition composition = new HtmlToPptx(_fonts).Write($"<p>{lines}</p>", output, setup);
 
         using var deck = PresentationDocument.Open(output, false);
-        IEnumerable<Uri> stored = deck.PresentationPart!.SlideParts.SelectMany(slide => slide.ImageParts).Select(part => part.Uri).Distinct();
+        IEnumerable<Uri> stored = deck.PresentationPart!.SlideParts
+            .SelectMany(slide => slide.ImageParts.Concat(slide.SlideLayoutPart!.ImageParts))
+            .Select(part => part.Uri)
+            .Distinct();
 
         Assert.True(composition.Pages.Count > 1);
         Assert.Single(stored);
+        Assert.All(deck.PresentationPart!.SlideParts, slide => Assert.Empty(slide.Slide!.Descendants<P.Picture>()));
     }
 
     /// <summary>A deck must state its own paper rather than inherit the viewer's palette.</summary>

@@ -22,4 +22,13 @@ public sealed record PptxOptions : DocumentOptions
     /// falls back to its own editing language, which is right more often than a guess would be.
     /// </remarks>
     public string? Language { get; init; }
+
+    /// <summary>Families the deck names after another face, such as Arimo set as Arial; none unless given.</summary>
+    /// <remarks>
+    /// A document can be measured in one face and handed over naming another with the same metrics: Arimo is
+    /// drawn to Arial's widths, so a server without Arial lays a page out in Arimo and the deck asks the reader
+    /// for the Arial every reader has, and the lines fall where they fell. A renamed family is not embedded —
+    /// the text no longer asks for it. The keys are family names as the faces report them.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> Typefaces { get; init; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }

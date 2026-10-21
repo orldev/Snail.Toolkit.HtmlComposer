@@ -10,6 +10,15 @@ namespace Snail.Toolkit.HtmlComposer.Engine.Styling;
 /// </remarks>
 internal static class CssValues
 {
+    /// <summary>The largest length a declaration may state, in points: about 350 metres.</summary>
+    /// <remarks>
+    /// A number past float's range parses to infinity, and infinity times the zero share of a length is NaN:
+    /// <c>font-size:1e39px</c> or a margin as large set every coordinate after it to a value no renderer can draw.
+    /// Browsers clamp lengths far below this; a value beyond it is cut to it, and one that is not a finite
+    /// number at all is not read.
+    /// </remarks>
+    public const float Largest = 1_000_000;
+
     private static readonly (string Unit, float Points)[] AbsoluteUnits =
     [
         ("px", Points.PerPixel),
@@ -35,7 +44,7 @@ internal static class CssValues
 
         if (value.EndsWith('%'))
         {
-            return ReadNumber(value[..^1]) is { } percent ? new Length(0, percent) : null;
+            return ReadNumber(value[..^1]) is { } percent ? new Length(0, Bounded(percent)) : null;
         }
 
         if (ReadNumber(value) is { } unitless)
@@ -95,11 +104,16 @@ internal static class CssValues
     }
 
     private static float? ReadNumber(ReadOnlySpan<char> text) =>
-        float.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float number) ? number : null;
+        float.TryParse(text.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float number) && float.IsFinite(number) ? number : null;
+
+    private static float Bounded(float value) => Math.Clamp(value, -Largest, Largest);
 
     private static Length? Scaled(ReadOnlySpan<char> value, string unit, float points) =>
-        value.EndsWith(unit, StringComparison.OrdinalIgnoreCase) && ReadNumber(value[..^unit.Length]) is { } number
-            ? new Length(number * points)
+        value.EndsWith(unit, StringComparison.OrdinalIgnoreCase)
+        && ReadNumber(value[..^unit.Length]) is { } number
+        && number * points is var scaled
+        && float.IsFinite(scaled)
+            ? new Length(Bounded(scaled))
             : null;
 
     private static Length? Absolute(ReadOnlySpan<char> value)

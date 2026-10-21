@@ -157,5 +157,17 @@ internal sealed record Style
 
     public bool AvoidsBreakInside { get; init; }
 
+    /// <summary>Which number of a running line the text of the element is; never inherited.</summary>
+    public TextField Field { get; init; }
+
     public bool IsBlockLevel => Display is Display.Block or Display.ListItem;
+
+    /// <summary>How far the baseline of the element's text stands from its line's, downwards being positive.</summary>
+    /// <remarks>
+    /// <c>vertical-align</c> does not inherit, but a raised box raises everything inside it: the link in a
+    /// footnote mark, <c>&lt;sup&gt;&lt;a&gt;1&lt;/a&gt;&lt;/sup&gt;</c>, read its own alignment, found
+    /// <c>baseline</c>, and sat on the line. The shift is carried down inline elements and added to; a block
+    /// starts again from none.
+    /// </remarks>
+    public float Shift { get; init; }
 }

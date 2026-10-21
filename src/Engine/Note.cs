@@ -23,6 +23,12 @@ public enum NoteKind
 
     /// <summary>A cell asked to cover more columns or rows than a table may hold, and its span was capped.</summary>
     SpanCapped,
+
+    /// <summary>Markup nested deeper, or a drawing larger, than the limits allow: the layout set the rest as plain text, a drawing left it undrawn.</summary>
+    NestingCapped,
+
+    /// <summary>The output format cannot hold something as it was set, and it was fitted to what the format allows.</summary>
+    FormatLimit,
 }
 
 /// <summary>One thing that could not be set as written, and what was done instead.</summary>

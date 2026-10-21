@@ -7,26 +7,53 @@ namespace Snail.Toolkit.HtmlComposer.Pdf;
 /// <summary>Draws composed pages onto a PDF canvas, in the order the engine lists them.</summary>
 /// <remarks>
 /// A plain reader of the composition: every position, size and break was settled by the engine, and the press
-/// only turns boxes into rectangles, spans into glyph runs and pictures into images. Each picture is decoded
-/// once per document, because the writer stores an image once per decoded instance and a logo
-/// repeated on every page would otherwise be stored on every page.
+/// only turns boxes into rectangles, spans into glyph runs, pictures into images and drawings into shapes.
+/// Each picture is decoded once per document, because the writer stores an image once per decoded instance and
+/// a logo repeated on every page would otherwise be stored on every page.
 /// </remarks>
 internal static class Press
 {
     private const string Producer = "Snail.Toolkit.HtmlComposer";
 
+    /// <summary>Prints the pages into memory first, then copies the finished file into the stream.</summary>
+    /// <remarks>
+    /// Skia writes a PDF through a native callback, and a stream given to it directly is written from inside that
+    /// callback: an exception from the stream — a client gone, a full disk, a response body that refuses
+    /// synchronous writes — crossed the native frame and aborted the process, a web server with it. Written into
+    /// Skia's own memory and copied out by managed code, a failing stream throws where the caller can catch it.
+    /// <see cref="Converter{TOptions}.Convert(IReadOnlyList{Section}, CancellationToken)"/> held the whole file in
+    /// memory already, so only a caller of <c>Write</c> gives up the streaming it never really had: Skia keeps
+    /// every page until it closes the document.
+    /// <para>
+    /// The pages are drawn with faces cut down to the glyphs they hold, because the PDF writer embeds a face whole:
+    /// a page of two letters carried all 443 KB of PT Sans.
+    /// </para>
+    /// </remarks>
     public static void Print(Composition composition, Stream output, Faces fonts, PdfOptions options, CancellationToken ct)
+    {
+        using Faces subset = fonts.Subset(composition, ct);
+        using var buffer = new SKDynamicMemoryWStream();
+
+        Pages(composition, buffer, subset, options, ct);
+
+        using SKData file = buffer.DetachAsData();
+        using Stream bytes = file.AsStream();
+
+        bytes.CopyTo(output);
+    }
+
+    private static void Pages(Composition composition, SKWStream target, Faces fonts, PdfOptions options, CancellationToken ct)
     {
         using var pictures = new Decoded();
         using var ink = new SKPaint { IsAntialias = true };
-        using var document = SKDocument.CreatePdf(output, MetadataOf(options));
+        using var document = SKDocument.CreatePdf(target, MetadataOf(options));
 
         foreach (Page page in composition.Pages)
         {
             ct.ThrowIfCancellationRequested();
 
             SKCanvas canvas = document.BeginPage(page.Width, page.Height);
-            Draw(canvas, page, fonts, pictures, ink);
+            Draw(canvas, page, fonts, pictures, ink, ct);
             document.EndPage();
         }
 
@@ -43,7 +70,7 @@ internal static class Press
         Producer = Producer,
     };
 
-    private static void Draw(SKCanvas canvas, Page page, Faces fonts, Decoded pictures, SKPaint ink)
+    private static void Draw(SKCanvas canvas, Page page, Faces fonts, Decoded pictures, SKPaint ink, CancellationToken ct)
     {
         foreach (RenderBox? box in page.Boxes.Where(box => box.IsPainted))
         {
@@ -52,7 +79,7 @@ internal static class Press
 
         foreach (ImageBox image in page.Images)
         {
-            DrawImage(canvas, image, pictures);
+            DrawImage(canvas, image, pictures, fonts, ct);
         }
 
         foreach (TextSpan span in page.Spans)
@@ -146,8 +173,19 @@ internal static class Press
         _ => null,
     };
 
-    private static void DrawImage(SKCanvas canvas, ImageBox box, Decoded pictures)
+    /// <summary>Draws a picture into its box: a drawing as shapes and text, anything else as pixels.</summary>
+    /// <remarks>
+    /// A drawing is never turned into pixels on its way into the file, so its lines stay sharp at any zoom and its
+    /// labels are set in the document's own faces, searched and copied like the rest of the page.
+    /// </remarks>
+    private static void DrawImage(SKCanvas canvas, ImageBox box, Decoded pictures, Faces fonts, CancellationToken ct)
     {
+        if (box.Image.IsVector)
+        {
+            Drawings.Draw(canvas, box.Image, RectOf(box.Bounds), fonts, box.Source, ct);
+            return;
+        }
+
         if (pictures.Of(box.Image) is not { } picture)
         {
             return;

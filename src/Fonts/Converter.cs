@@ -94,10 +94,13 @@ public abstract class Converter<TOptions>(FontLibrary library, TOptions options)
     /// <summary>What the renderer has to say beyond the faces: whatever its format could not carry.</summary>
     protected virtual IEnumerable<Note> NotesFor(Composition composition) => [];
 
+    /// <summary>Whether the renderer reads the pages' text and tables as structure; see <see cref="Typesetter.IsStructured"/>.</summary>
+    protected virtual bool IsStructured => false;
+
     private Composition Compose(IReadOnlyList<Section> sections, Faces faces, CancellationToken ct)
     {
         IImageSource pictures = options.Images ?? new LocalPictures(options.BaseDirectory);
-        Composition composition = new Typesetter(faces, pictures).Compose(sections, ct);
+        Composition composition = new Typesetter(faces, pictures) { IsStructured = IsStructured }.Compose(sections, ct);
 
         return composition with
         {

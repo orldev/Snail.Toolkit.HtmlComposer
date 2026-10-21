@@ -18,6 +18,12 @@ public sealed class Faces(FontLibrary library) : ITextMeasurer, IDisposable
 
     private readonly Dictionary<Font, SKFont> _fonts = [];
 
+    /// <summary>The cut faces drawn in place of the library's, each with the data it was made over.</summary>
+    private readonly Dictionary<SKTypeface, (SKTypeface Typeface, SKData Data)> _cuts = [];
+
+    /// <summary>Where the characters this instance measures are counted, while a composition is surveyed.</summary>
+    private Census? _census;
+
     private bool _isDisposed;
 
     /// <summary>The font object a run is measured and drawn with, made once per face and size.</summary>
@@ -36,7 +42,8 @@ public sealed class Faces(FontLibrary library) : ITextMeasurer, IDisposable
         }
 
         FontLibrary.Match match = library.Resolve(font);
-        var created = new SKFont(match.Typeface, font.Size)
+        SKTypeface typeface = _cuts.TryGetValue(match.Typeface, out (SKTypeface Typeface, SKData Data) cut) ? cut.Typeface : match.Typeface;
+        var created = new SKFont(typeface, font.Size)
         {
             Subpixel = true,
             LinearMetrics = true,
@@ -54,7 +61,102 @@ public sealed class Faces(FontLibrary library) : ITextMeasurer, IDisposable
     {
         SKFont face = For(font);
 
+        _census?.Add(text, font);
+
         return font.Tracking == 0 ? face.MeasureText(text) : face.MeasureText(text) + (font.Tracking * face.CountGlyphs(text));
+    }
+
+    /// <summary>The same faces cut down to the glyphs a composition draws, for a writer that embeds what it draws with.</summary>
+    /// <param name="composition">The pages to be drawn; the runs on them and the labels of their drawings decide the glyphs.</param>
+    /// <param name="ct">Looked at between pages and while drawings are surveyed.</param>
+    /// <returns>Faces to draw the composition with, which the caller disposes once the document is written.</returns>
+    /// <remarks>
+    /// A writer that embeds a face whole — Skia's PDF as SkiaSharp builds it — carries every glyph of it: 443 KB
+    /// for two letters of PT Sans. Drawn with these faces it carries only the outlines drawn. Every glyph keeps its
+    /// number and its advance, so a run is drawn exactly where and as wide as it was measured. Text the pages do
+    /// not hold is not in these faces: draw only the composition they were cut for. A face of CFF outlines, one
+    /// whose maker forbade subsetting and one that does not read as plain TrueType are drawn whole, as before.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">The token was cancelled while the composition was surveyed.</exception>
+    public Faces Subset(Composition composition, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(composition);
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+        Dictionary<SKTypeface, HashSet<int>> used = Survey(composition, ct);
+        var subset = new Faces(library);
+
+        foreach ((SKTypeface typeface, HashSet<int> characters) in used)
+        {
+            if (library.TrueTypeDataOf(typeface) is not { } data || Subsetter.Cut(data.AsSpan(), GlyphsOf(typeface, characters)) is not { } bytes)
+            {
+                continue;
+            }
+
+            var cutData = SKData.CreateCopy(bytes);
+            SKTypeface? cut = SKTypeface.FromData(cutData);
+
+            if (cut is null)
+            {
+                cutData.Dispose();
+                continue;
+            }
+
+            subset._cuts[typeface] = (cut, cutData);
+        }
+
+        return subset;
+    }
+
+    /// <summary>The characters a composition draws in each face: its runs, and the labels its drawings set.</summary>
+    /// <remarks>
+    /// A label is found where it is drawn: every drawing is drawn once onto a canvas that keeps nothing, through
+    /// faces that count what they measure, and every piece of a label is measured before it is drawn.
+    /// </remarks>
+    private Dictionary<SKTypeface, HashSet<int>> Survey(Composition composition, CancellationToken ct)
+    {
+        var census = new Census(library);
+        using var listening = new Faces(library) { _census = census };
+
+        foreach (Page page in composition.Pages)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            foreach (TextSpan span in page.Spans)
+            {
+                census.Add(span.Text, span.Font);
+            }
+
+            foreach (ImageBox box in page.Images)
+            {
+                if (box.Image.IsVector)
+                {
+                    using var canvas = new SKNoDrawCanvas((int)Math.Ceiling(page.Width), (int)Math.Ceiling(page.Height));
+                    var frame = new SKRect(box.Bounds.X, box.Bounds.Y, box.Bounds.Right, box.Bounds.Bottom);
+
+                    Drawings.Draw(canvas, box.Image, frame, listening, box.Source, ct);
+                }
+            }
+        }
+
+        return census.Characters;
+    }
+
+    private static ushort[] GlyphsOf(SKTypeface typeface, HashSet<int> characters)
+    {
+        var text = new StringBuilder(characters.Count * 2);
+
+        foreach (int character in characters)
+        {
+            if (Rune.IsValid(character))
+            {
+                text.Append(new Rune(character).ToString());
+            }
+        }
+
+        using var font = new SKFont(typeface);
+
+        return font.GetGlyphs(text.ToString());
     }
 
     /// <summary>The characters of the text the face has no glyph for.</summary>
@@ -104,6 +206,43 @@ public sealed class Faces(FontLibrary library) : ITextMeasurer, IDisposable
             font.Dispose();
         }
 
+        foreach ((SKTypeface typeface, SKData data) in _cuts.Values)
+        {
+            typeface.Dispose();
+            data.Dispose();
+        }
+
         _fonts.Clear();
+        _cuts.Clear();
+    }
+
+    /// <summary>The characters measured in each face, counted while a composition is surveyed.</summary>
+    /// <remarks>A run's font is resolved to its face once per font, not once per run.</remarks>
+    private sealed class Census(FontLibrary library)
+    {
+        private readonly Dictionary<Font, HashSet<int>> _byFont = [];
+
+        public Dictionary<SKTypeface, HashSet<int>> Characters { get; } = [];
+
+        public void Add(string text, Font font)
+        {
+            if (!_byFont.TryGetValue(font, out HashSet<int>? characters))
+            {
+                SKTypeface typeface = library.Resolve(font).Typeface;
+
+                if (!Characters.TryGetValue(typeface, out characters))
+                {
+                    characters = [];
+                    Characters[typeface] = characters;
+                }
+
+                _byFont[font] = characters;
+            }
+
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                characters.Add(rune.Value);
+            }
+        }
     }
 }

@@ -1,1 +1,3 @@
 #nullable enable
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Typefaces.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Typefaces.init -> void

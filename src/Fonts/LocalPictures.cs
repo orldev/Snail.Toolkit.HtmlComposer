@@ -1,3 +1,4 @@
+using System.Text;
 using Snail.Toolkit.HtmlComposer.Engine;
 
 namespace Snail.Toolkit.HtmlComposer.Fonts;
@@ -19,16 +20,28 @@ public sealed class LocalPictures(string? baseDirectory) : IImageSource
         return content is null ? null : Decoding.Read(content);
     }
 
+    /// <summary>The bytes a <c>data:</c> URI carries, base64 or percent-encoded text.</summary>
+    /// <remarks>
+    /// A raster picture comes as base64, but a drawing is text and is usually written as it is,
+    /// <c>data:image/svg+xml,%3Csvg…</c> or <c>data:image/svg+xml;utf8,&lt;svg…</c>, so a payload that does not
+    /// say base64 is taken as percent-encoded UTF-8.
+    /// </remarks>
     private static byte[]? FromDataUri(string source)
     {
         int comma = source.IndexOf(',', StringComparison.Ordinal);
 
-        if (comma < 0 || !source[..comma].EndsWith(";base64", StringComparison.OrdinalIgnoreCase))
+        if (comma < 0)
         {
             return null;
         }
 
         string payload = source[(comma + 1)..];
+
+        if (!source[..comma].EndsWith(";base64", StringComparison.OrdinalIgnoreCase))
+        {
+            return Encoding.UTF8.GetBytes(Uri.UnescapeDataString(payload));
+        }
+
         byte[] buffer = new byte[(payload.Length * 3 / 4) + 3];
 
         return Convert.TryFromBase64String(payload, buffer, out int written) ? buffer[..written] : null;
@@ -71,13 +84,18 @@ public sealed class LocalPictures(string? baseDirectory) : IImageSource
     }
 
     /// <summary>The bytes of a file that really lies under the base directory, or nothing.</summary>
+    /// <remarks>
+    /// The path is weighed by its letters before the file system is asked anything. Asking first meant a source
+    /// such as <c>\\host\share\x.png</c> made the server look for a file on another machine — on Windows, signing
+    /// in to it — before the fence turned the answer away.
+    /// </remarks>
     private static byte[]? Fenced(string baseDirectory, string relative)
     {
         string root = Real(Path.GetFullPath(baseDirectory));
         string fence = Path.EndsInDirectorySeparator(root) ? root : $"{root}{Path.DirectorySeparatorChar}";
         string path = Path.GetFullPath(Path.Combine(root, relative));
 
-        if (!File.Exists(path))
+        if (!path.StartsWith(fence, StringComparison.Ordinal) || !File.Exists(path))
         {
             return null;
         }

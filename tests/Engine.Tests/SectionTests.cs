@@ -36,8 +36,8 @@ public sealed class SectionTests
         IReadOnlyList<Page> pages = Document().Pages;
         int total = pages.Count;
 
-        Assert.Contains(pages[1].Spans, span => span.Text == $"2/{total}");
-        Assert.Contains(pages[^1].Spans, span => span.Text == $"{total}/{total}");
+        Assert.Contains($"2/{total}", pages[1].Lines);
+        Assert.Contains($"{total}/{total}", pages[^1].Lines);
     }
 
     [Fact]

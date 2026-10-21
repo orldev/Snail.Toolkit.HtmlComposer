@@ -16,7 +16,25 @@ public static class Notes
     {
         var used = composition.Pages.SelectMany(page => page.Spans).Select(span => span.Font).Distinct().ToList();
 
-        return [.. library.NotesFor(used), .. Unset(composition, measurer)];
+        return [.. library.NotesFor(used), .. Unset(composition, measurer), .. Undrawn(composition)];
+    }
+
+    /// <summary>A note for a drawing larger or deeper than one drawing may be, of which only a part is drawn.</summary>
+    private static IEnumerable<Note> Undrawn(Composition composition)
+    {
+        var drawings = composition.Pages
+            .SelectMany(page => page.Images)
+            .Select(box => box.Image)
+            .Where(image => image.IsVector)
+            .Distinct();
+
+        if (drawings.Any(Drawings.IsOverBudget))
+        {
+            yield return new Note(
+                NoteKind.NestingCapped,
+                "<svg>",
+                $"A drawing nests more than {Sketch.Deepest} deep or holds more than {Sketch.Most} elements; only part of it is drawn.");
+        }
     }
 
     /// <summary>A note for every family asked to set a character it has no glyph for.</summary>

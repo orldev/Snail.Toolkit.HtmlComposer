@@ -18,4 +18,21 @@ public sealed record Page(
     float Height,
     IReadOnlyList<RenderBox> Boxes,
     IReadOnlyList<ImageBox> Images,
-    IReadOnlyList<TextSpan> Spans);
+    IReadOnlyList<TextSpan> Spans)
+{
+    /// <summary>The blocks of text on the page as paragraphs, for a renderer whose text flows again on its own.</summary>
+    /// <remarks>Every run named here is also in <see cref="Spans"/>; a renderer that draws positions alone can ignore this.</remarks>
+    public IReadOnlyList<TextFrame> Texts { get; init; } = [];
+
+    /// <summary>The tables on the page as grids, for a renderer that has tables of its own.</summary>
+    /// <remarks>Every box, run and picture named here is also in the lists above; a renderer that draws positions alone can ignore this.</remarks>
+    public IReadOnlyList<TableFrame> Tables { get; init; } = [];
+
+    /// <summary>What the running header, footer and side note put on this page; <see langword="null"/> when there are none.</summary>
+    /// <remarks>
+    /// Running lines are drawn with the page — their boxes, pictures and runs are in the lists above — and are
+    /// also told apart here, because a deck keeps them once, on the layout every slide is made from, instead of
+    /// on each slide.
+    /// </remarks>
+    public Running? Running { get; init; }
+}

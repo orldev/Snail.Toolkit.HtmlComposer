@@ -9,4 +9,12 @@ namespace Snail.Toolkit.HtmlComposer.Engine;
 /// reserve room, and holding decoded pixels for the whole document would cost the memory of every picture
 /// at full resolution before a single page is drawn.
 /// </remarks>
-public sealed record Image(byte[] Content, int Width, int Height);
+public sealed record Image(byte[] Content, int Width, int Height)
+{
+    /// <summary>Whether the bytes are SVG markup to be drawn as shapes rather than pixels to be decoded.</summary>
+    /// <remarks>
+    /// The engine sizes both alike and never looks inside; the flag tells a renderer which way to draw, so a PDF
+    /// keeps the lines of a drawing as lines and its words as text that is searched and copied.
+    /// </remarks>
+    public bool IsVector { get; init; }
+}

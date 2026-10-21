@@ -7,9 +7,9 @@ namespace Snail.Toolkit.HtmlComposer.Fonts;
 /// <summary>The typefaces documents are set in, loaded from files, streams or embedded resources.</summary>
 /// <remarks>
 /// One library serves every renderer, so a deck and a PDF of the same markup are set from the same faces and
-/// measured the same way. A PDF embeds each face as a subset, and so reads the same on a machine that has none
-/// of these fonts installed, Cyrillic included. Prefer TrueType outlines (<c>.ttf</c>): a PDF embeds them as
-/// real fonts, but writes CFF-flavoured OpenType (<c>.otf</c>) as Type 3 glyph procedures that print without
+/// measured the same way. A PDF embeds every face it uses, cut down to the glyphs the document draws, and so
+/// reads the same on a machine that has none of these fonts installed, Cyrillic included. Prefer TrueType
+/// outlines (<c>.ttf</c>): a PDF embeds them as real fonts, but writes CFF-flavoured OpenType (<c>.otf</c>) as Type 3 glyph procedures that print without
 /// hinting and cannot be searched or copied. A family with no bold face is set in its regular face rather than
 /// emboldened, because synthetic bold is written as Type 3 as well. Load every face before the first document
 /// is written; from then on the library is only read and can be shared between threads.
@@ -111,6 +111,16 @@ public sealed class FontLibrary : IDisposable
             : new Match(SKTypeface.Default, IsSlanted: font.IsItalic);
     }
 
+    /// <summary>The bytes a TrueType face was loaded from; nothing for a face of CFF outlines or one this library did not load.</summary>
+    internal SKData? TrueTypeDataOf(SKTypeface typeface)
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+        Face? face = _faces.Find(face => ReferenceEquals(face.Typeface, typeface));
+
+        return face is { HasCffOutlines: false } ? face.Data : null;
+    }
+
     /// <summary>The faces a document actually sets, with the bytes to carry them inside it.</summary>
     /// <remarks>
     /// Only the faces the document uses, so a deck is not fattened by every face the application happened to
@@ -167,9 +177,7 @@ public sealed class FontLibrary : IDisposable
                 $"None of the families {font.Family} is loaded; the text is set in \"{_faces[0].Family}\" instead.");
         }
 
-        IEnumerable<Match> bold = fonts.Where(font => font.IsBold).Select(Resolve).Where(match => match.Typeface.FontWeight < 600);
-
-        foreach (string? family in bold.Select(match => match.Typeface.FamilyName).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string family in UnboldedFamilies(fonts))
         {
             yield return new Note(
                 NoteKind.BoldSubstituted,
@@ -189,6 +197,22 @@ public sealed class FontLibrary : IDisposable
         }
     }
 
+    /// <summary>The families whose bold text is set in a regular face, because none of their bold faces is loaded.</summary>
+    private IEnumerable<string> UnboldedFamilies(IReadOnlyCollection<Font> fonts)
+    {
+        var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (Font font in fonts.Where(font => font.IsBold))
+        {
+            SKTypeface typeface = Resolve(font).Typeface;
+
+            if (typeface.FontWeight < 600 && named.Add(typeface.FamilyName))
+            {
+                yield return typeface.FamilyName;
+            }
+        }
+    }
+
     /// <summary>The face each font is set in, once per face however many fonts chose it.</summary>
     private IEnumerable<Face> Chosen(IReadOnlyCollection<Font> fonts) =>
         fonts.Select(Chosen).OfType<Face>().Distinct();
@@ -201,8 +225,9 @@ public sealed class FontLibrary : IDisposable
         return family.Count == 0 ? null : family.MinBy(candidate => Distance(candidate, font));
     }
 
-    private static int Distance(Face face, Font font) =>
-        (face.IsItalic == font.IsItalic ? 0 : 1000) + Math.Abs(face.Typeface.FontWeight - font.Weight);
+    /// <remarks>Counted in <see langword="long"/>: a weight from markup may sit at the end of the range, where the difference of two ints has no absolute value.</remarks>
+    private static long Distance(Face face, Font font) =>
+        (face.IsItalic == font.IsItalic ? 0 : 1000) + Math.Abs((long)face.Typeface.FontWeight - font.Weight);
 
     private static bool IsFontFile(string path) =>
         Path.GetExtension(path) is var extension

@@ -45,6 +45,36 @@ internal sealed class LineFlow(
 
     /// <summary>What is painted behind the inline content: the backgrounds and borders of its runs.</summary>
     public IReadOnlyList<LineBox> Boxes => boxes;
+
+    /// <summary>Why the line ends where it does, which decides whether the next one carries the same paragraph on.</summary>
+    public LineEnd End { get; init; } = LineEnd.Last;
+
+    /// <summary>How the block the line belongs to aligns its lines.</summary>
+    public TextAlign Align { get; init; }
+}
+
+/// <summary>Why a line ends: it ran out of room at a space or inside a word, or the text told it to.</summary>
+/// <remarks>
+/// A renderer that lets the text flow again — a deck, whose text boxes wrap on their own — has to put the
+/// lines of a paragraph back together, and needs to know what stood between them: a space that was dropped
+/// at the break, nothing at all where a word was parted, or the end of the paragraph.
+/// </remarks>
+internal enum LineEnd
+{
+    /// <summary>The line ran out of room at a space, which the break swallowed.</summary>
+    Space,
+
+    /// <summary>The line ran out of room where a word may be parted without a space: after a hyphen or at a soft hyphen.</summary>
+    Word,
+
+    /// <summary>A word wider than the whole line was cut between two of its letters.</summary>
+    Cut,
+
+    /// <summary>A forced break, such as <c>br</c>, ended the line.</summary>
+    Forced,
+
+    /// <summary>The content ran out: the last line of its block.</summary>
+    Last,
 }
 
 /// <summary>The background and border of one run of inline content, measured from the top of its line.</summary>
@@ -86,7 +116,14 @@ internal sealed record LineText(
     float Width,
     Font Font,
     Rgba Color,
-    TextDecoration Decoration);
+    TextDecoration Decoration)
+{
+    /// <summary>Which number of a running line the text is, if it is one.</summary>
+    public TextField Field { get; init; }
+
+    /// <summary>Whether the text is a list item's marker, hung before the line rather than part of it.</summary>
+    public bool IsMarker { get; init; }
+}
 
 /// <summary>A picture on a line: its left edge is final, its top is measured from the top of the line.</summary>
 internal sealed record LinePicture(float X, float Top, float Width, float Height, Image Image, Rect? Source = null);
@@ -192,6 +229,17 @@ internal sealed record BlockFrame(
     /// </remarks>
     public IReadOnlyList<Flow> Resumed { get; init; } = [];
 
+    /// <summary>How far a table cell's content was lowered inside its top padding to sit as the cell is aligned.</summary>
+    /// <remarks>
+    /// A cell made as tall as its row takes the room it gains into its top padding, so the padding alone no longer
+    /// says what the markup declared. A renderer with cells of its own — a deck — aligns them itself and needs the
+    /// declared padding back.
+    /// </remarks>
+    public float Lift { get; init; }
+
+    /// <summary>The <c>vertical-align</c> of a table cell, which a deck turns into the anchor of its own cell.</summary>
+    public VerticalAlign CellAlign { get; init; }
+
     public bool IsAnonymous => Element.Length == 0;
 }
 
@@ -222,7 +270,6 @@ internal sealed class BlockFlow : Flow
         MarginBottom = marginBottom;
         IsSplitAbove = isSplitAbove;
         IsSplitBelow = isSplitBelow;
-        HasForcedBreakInside = HasForcedBreakAmong(children);
         Head = isSplitAbove && !frame.ClonesDecoration ? 0 : frame.Border.Top.Width + frame.Padding.Top;
         Foot = isSplitBelow && !frame.ClonesDecoration ? 0 : frame.Border.Bottom.Width + frame.Padding.Bottom;
 
@@ -230,6 +277,8 @@ internal sealed class BlockFlow : Flow
 
         Height = Head + (frame.MinContentHeight is { } minimum ? Math.Max(content, minimum) : content) + Foot;
     }
+
+    private bool? _hasForcedBreakInside;
 
     public BlockFrame Frame { get; }
 
@@ -244,7 +293,12 @@ internal sealed class BlockFlow : Flow
     public bool IsSplitBelow { get; }
 
     /// <inheritdoc/>
-    public override bool HasForcedBreakInside { get; }
+    /// <remarks>
+    /// Asked for lazily: a cut makes a new block of everything still waiting on every page, and answering this in
+    /// the constructor walked all of it each time — one of the passes that made a document of 40 000 paragraphs
+    /// cost four times what one of 20 000 did.
+    /// </remarks>
+    public override bool HasForcedBreakInside => _hasForcedBreakInside ??= HasForcedBreakAmong(Children);
 
     public float Head { get; }
 
@@ -272,7 +326,7 @@ internal sealed class BlockFlow : Flow
     /// <summary>The same block opened by the heading it sets wherever it resumes.</summary>
     /// <remarks>Given to a fragment that follows another, so what it holds reads as a continuation.</remarks>
     public BlockFlow Headed() =>
-        new(Frame, [.. Frame.Resumed, .. Children], MarginTop, MarginBottom, IsSplitAbove, IsSplitBelow);
+        Frame.Resumed.Count == 0 ? this : new(Frame, [.. Frame.Resumed, .. Children], MarginTop, MarginBottom, IsSplitAbove, IsSplitBelow);
 
     /// <summary>The same block with its continued foot set at the end of what it holds.</summary>
     /// <remarks>Given to a fragment that has a continuation, once pagination has left the room for it.</remarks>

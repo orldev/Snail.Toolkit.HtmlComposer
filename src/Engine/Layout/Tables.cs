@@ -24,12 +24,17 @@ internal sealed class Tables(Galley galley)
         List<Band> grid = Grid(rows);
         float[] columns = Columns(grid, box.ContentWidth);
         List<Flow> set = Tabulate(rows, grid, columns, box.ContentLeft, box.ContentWidth, pending);
-        int held = rows.Count(row => row.IsContinued);
-        List<Flow> children = [.. set.Take(set.Count - held)];
+        List<Flow> children = [];
+        List<Flow> continued = [];
+
+        for (int index = 0; index < set.Count; index++)
+        {
+            (rows[index].IsContinued ? continued : children).Add(set[index]);
+        }
 
         BlockFlow table = Galley.Framed(element, style, box, children, containingWidth);
 
-        return held == 0 ? table : table.Continuing([.. set.Skip(set.Count - held)]);
+        return continued.Count == 0 ? table : table.Continuing(continued);
     }
 
     /// <summary>The width a table asks for when it is measured rather than set: its columns end to end.</summary>
@@ -50,27 +55,16 @@ internal sealed class Tables(Galley galley)
         float width,
         PendingMarker? pending)
     {
-        var set = grid
-            .Select((band, row) => band.Cells
-                .Select(placement => (
-                    placement.Cell,
-                    Block: Cell(
-                        placement,
-                        columns,
-                        x,
-                        RightOf(band, placement),
-                        BelowOf(grid, row, placement),
-                        pending)))
-                .ToList())
-            .ToList();
+        var lifted = new List<List<(DeclaredCell Cell, BlockFlow Block, float Above)>>(grid.Count);
 
-        var lifted = set.Select(Aligned).ToList();
+        for (int row = 0; row < grid.Count; row++)
+        {
+            List<(DeclaredCell Cell, BlockFlow Block)> set = CellsOf(grid, row, columns, x, pending);
 
-        float[] heights = [.. lifted.Select(row => row
-            .Where(cell => cell.Cell.Down == 1)
-            .Select(cell => cell.Block.Height + cell.Above)
-            .DefaultIfEmpty(0)
-            .Max())];
+            lifted.Add(Aligned(set));
+        }
+
+        float[] heights = [.. lifted.Select(OwnHeightOf)];
 
         for (int index = 0; index < lifted.Count; index++)
         {
@@ -92,6 +86,45 @@ internal sealed class Tables(Galley galley)
     /// beside a number of 28 reads as one line only when the two sit on the same baseline rather than starting
     /// at the same height. A cell holding no text at all has no baseline to share and stays where it was.
     /// </remarks>
+    /// <summary>The cells of one row of the grid, each set at its column's width.</summary>
+    private List<(DeclaredCell Cell, BlockFlow Block)> CellsOf(
+        IReadOnlyList<Band> grid,
+        int row,
+        float[] columns,
+        float x,
+        PendingMarker? pending)
+    {
+        Band band = grid[row];
+        var set = new List<(DeclaredCell Cell, BlockFlow Block)>(band.Cells.Count);
+
+        foreach (Placement placement in band.Cells)
+        {
+            BorderSide right = RightOf(band, placement);
+            BorderSide below = BelowOf(grid, row, placement);
+            BlockFlow block = Cell(placement, columns, x, right, below, pending);
+
+            set.Add((placement.Cell, block));
+        }
+
+        return set;
+    }
+
+    /// <summary>How tall a row is by the cells that end in it; a cell spanning rows is reckoned later.</summary>
+    private static float OwnHeightOf(List<(DeclaredCell Cell, BlockFlow Block, float Above)> row)
+    {
+        float height = 0;
+
+        foreach ((DeclaredCell cell, BlockFlow block, float above) in row)
+        {
+            if (cell.Down == 1)
+            {
+                height = Math.Max(height, block.Height + above);
+            }
+        }
+
+        return height;
+    }
+
     private static List<(DeclaredCell Cell, BlockFlow Block, float Above)> Aligned(
         List<(DeclaredCell Cell, BlockFlow Block)> row)
     {
@@ -249,7 +282,13 @@ internal sealed class Tables(Galley galley)
         };
 
         Edges padding = cell.Frame.Padding with { Top = cell.Frame.Padding.Top + above };
-        BlockFrame frame = cell.Frame with { Padding = padding, MinContentHeight = height - cell.Head - cell.Foot - above };
+        BlockFrame frame = cell.Frame with
+        {
+            Padding = padding,
+            MinContentHeight = height - cell.Head - cell.Foot - above,
+            Lift = above,
+            CellAlign = align,
+        };
 
         return new BlockFlow(frame, cell.Children, 0, 0);
     }

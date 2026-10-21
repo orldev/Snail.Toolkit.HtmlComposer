@@ -59,8 +59,8 @@ public sealed class PageFurnitureTests
         IReadOnlyList<Page> pages = Compose($"<p style='margin:0'>{Typeset.Numbered(40)}</p>", Framed(header: null, running)).Pages;
         int total = pages.Count;
 
-        Assert.Contains(pages[0].Spans, span => span.Text == $"1/{total}");
-        Assert.Contains(pages[^1].Spans, span => span.Text == $"{total}/{total}");
+        Assert.Contains($"1/{total}", pages[0].Lines);
+        Assert.Contains($"{total}/{total}", pages[^1].Lines);
     }
 
     /// <summary>Furniture is set into the margins, not into the flow: the content starts where it always did.</summary>

@@ -20,8 +20,15 @@ namespace Snail.Toolkit.HtmlComposer.Engine;
 /// </remarks>
 public sealed class Typesetter(ITextMeasurer measurer, IImageSource? images = null)
 {
+    /// <summary>Whether pages also carry their blocks of text and their tables as structure, in <see cref="Page.Texts"/> and <see cref="Page.Tables"/>.</summary>
+    /// <remarks>
+    /// Off unless asked for. Only a renderer whose own objects reflow — a deck — reads the structure, and
+    /// gathering it on every page cost a PDF 5 to 11 per cent more memory for nothing it would ever draw.
+    /// </remarks>
+    public bool IsStructured { get; init; }
+
     /// <summary>Sets a document into pages of the given size and margins.</summary>
-    /// <exception cref="ArgumentException">The margins leave no room for content on the page.</exception>
+    /// <exception cref="ArgumentException">The margins leave no room for content on the page, or the sheet is not a finite size.</exception>
     /// <exception cref="OperationCanceledException">The token was cancelled before the document was set.</exception>
     public Composition Compose(string html, PageSetup setup, CancellationToken ct = default)
     {
@@ -37,7 +44,7 @@ public sealed class Typesetter(ITextMeasurer measurer, IImageSource? images = nu
     /// Numbering runs through the whole document rather than restarting with each section, and the running
     /// lines are set last, when the number of pages of every section is known.
     /// </remarks>
-    /// <exception cref="ArgumentException">There are no sections, or a section's margins leave no room.</exception>
+    /// <exception cref="ArgumentException">There are no sections, or a section's margins leave no room or its sheet is not a finite size.</exception>
     /// <exception cref="OperationCanceledException">The token was cancelled before the document was set.</exception>
     public Composition Compose(IReadOnlyList<Section> sections, CancellationToken ct = default)
     {
@@ -62,6 +69,11 @@ public sealed class Typesetter(ITextMeasurer measurer, IImageSource? images = nu
         {
             throw new ArgumentException("The margins leave no room for content on the page.", parameter);
         }
+
+        if (!float.IsFinite(setup.Width) || !float.IsFinite(setup.Height) || setup.Width > CssValues.Largest || setup.Height > CssValues.Largest)
+        {
+            throw new ArgumentException($"A sheet is measured in points, finite and no larger than {CssValues.Largest}.", parameter);
+        }
     }
 
     /// <summary>Sets the sections with parsers no other composition is using, as a composition is set on one thread.</summary>
@@ -79,7 +91,7 @@ public sealed class Typesetter(ITextMeasurer measurer, IImageSource? images = nu
 
             IHtmlDocument document = html.ParseDocument(section.Html);
             BlockFlow galley = Galley.Set(document, Cascade.Of(document, css), section.Setup.Content, measurements, pictures, notes, ct);
-            IReadOnlyList<Page> run = Paginator.Paginate(galley, section.Setup, first, ct);
+            IReadOnlyList<Page> run = Paginator.Paginate(galley, section.Setup, first, IsStructured, ct);
 
             runs.Add(run);
             first += run.Count;
@@ -89,7 +101,7 @@ public sealed class Typesetter(ITextMeasurer measurer, IImageSource? images = nu
 
         foreach ((IReadOnlyList<Page>? run, Section? section) in runs.Zip(sections))
         {
-            pages.AddRange(Furniture.Around(run, section.Setup, first - 1, measurements, pictures, notes, html, css, ct));
+            pages.AddRange(Furniture.Around(run, section.Setup, first - 1, measurements, pictures, notes, html, css, IsStructured, ct));
         }
 
         return new Composition(pages, [.. notes.Distinct()]);

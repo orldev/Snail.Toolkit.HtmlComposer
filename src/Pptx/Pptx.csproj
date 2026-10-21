@@ -2,9 +2,10 @@
 
   <PropertyGroup>
     <Description>
-      Renders HTML to PowerPoint. Pages laid out by Snail.Toolkit.HtmlComposer.Engine become slides: boxes are
-      shapes, pictures are pictures and every run of text is a text box placed where the engine set it, so a
-      deck carries the layout of the document rather than a picture of it.
+      Renders HTML to PowerPoint. Pages laid out by Snail.Toolkit.HtmlComposer.Engine become slides written in
+      PowerPoint's own objects: tables are tables, blocks of text are text boxes holding their paragraphs, and
+      the running header and footer sit on the slide layout with PowerPoint's slide number, so a deck carries
+      the layout of the document and is edited like any other.
     </Description>
     <PackageTags>html;pptx;powerpoint;openxml;slides</PackageTags>
   </PropertyGroup>

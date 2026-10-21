@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using AngleSharp.Dom;
 using Snail.Toolkit.HtmlComposer.Engine.Styling;
 
@@ -12,6 +13,15 @@ namespace Snail.Toolkit.HtmlComposer.Engine.Layout;
 /// </remarks>
 internal sealed class Galley
 {
+    /// <summary>How deep elements may nest before what lies below is set as plain text.</summary>
+    /// <remarks>
+    /// The layout follows the tree by recursion, a few frames per element, and a stack overflow is not an
+    /// exception: it ends the process. Measured on a thread-pool thread, 1 000 nested blocks were set and 2 000 —
+    /// ten kilobytes of markup — ended a web server with them. A document nests a few dozen deep; this leaves room
+    /// for ten times that, and below it the words are kept and only the boxes are given up.
+    /// </remarks>
+    internal const int Deepest = 256;
+
     private readonly Cascade _cascade;
 
     private readonly LineBreaker _breaker;
@@ -27,6 +37,12 @@ internal sealed class Galley
     private readonly CancellationToken _ct;
 
     private float _rootFontSize = Style.Initial.Font.Size;
+
+    private bool _isWordStart = true;
+
+    private int _depth;
+
+    private bool _isCapped;
 
     private Galley(Cascade cascade, Measurements measurements, Pictures pictures, List<Note> notes, float pageHeight, CancellationToken ct)
     {
@@ -120,38 +136,85 @@ internal sealed class Galley
     }
 
     private static float? PixelsOf(IElement element, string attribute) =>
-        float.TryParse(element.GetAttribute(attribute), NumberStyles.Float, CultureInfo.InvariantCulture, out float pixels) && pixels > 0
-            ? Points.FromPixels(pixels)
+        float.TryParse(element.GetAttribute(attribute), NumberStyles.Float, CultureInfo.InvariantCulture, out float pixels)
+        && pixels > 0
+        && float.IsFinite(Points.FromPixels(pixels))
+            ? Math.Min(Points.FromPixels(pixels), CssValues.Largest)
             : null;
 
     internal static bool IsTag(IElement element, string name) => element.LocalName.Equals(name, StringComparison.Ordinal);
 
-    private static string Transformed(string text, TextTransform transform) => transform switch
+    /// <summary>A text as its transform writes it, the start of a word known across the texts before it.</summary>
+    /// <remarks>
+    /// A word may be split between nodes — <c>&lt;b&gt;Hel&lt;/b&gt;lo</c> — so whether a text opens a word is
+    /// carried from the text before it in the same block, whatever that text's own transform was.
+    /// </remarks>
+    private string Transformed(string text, TextTransform transform)
     {
-        TextTransform.Uppercase => text.ToUpperInvariant(),
-        TextTransform.Lowercase => text.ToLowerInvariant(),
-        TextTransform.Capitalize => Capitalized(text),
-        _ => text,
-    };
+        string transformed = transform switch
+        {
+            TextTransform.Uppercase => text.ToUpperInvariant(),
+            TextTransform.Lowercase => text.ToLowerInvariant(),
+            TextTransform.Capitalize => Capitalized(text, _isWordStart),
+            _ => text,
+        };
+
+        _isWordStart = text.Length == 0 ? _isWordStart : IsWordBoundary(text[^1]) || (_isWordStart && IsOpening(text));
+
+        return transformed;
+    }
+
+    /// <summary>Whether a text holds nothing that could begin a word, so a word still starts after it.</summary>
+    private static bool IsOpening(string text)
+    {
+        foreach (char character in text)
+        {
+            if (!IsWordBoundary(character))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>Raises the first letter of every word, leaving the rest of each word as it was typed.</summary>
     /// <remarks>
     /// Casing is invariant rather than cultural: a document carries no locale, and a Turkish machine would
     /// otherwise print a dotless capital in English and Russian text alike.
     /// </remarks>
-    private static string Capitalized(string text)
+    /// <remarks>
+    /// The first letter of each word is raised, and a word ends only where text does: a space, a dash, an opening
+    /// bracket or quote. An apostrophe, a stop inside a word, a combining accent and either half of a surrogate
+    /// pair belong to the word they stand in — capitalising after every non-letter wrote «Don'T» and «CaféS».
+    /// </remarks>
+    private static string Capitalized(string text, bool isWordStart)
     {
         char[] letters = text.ToCharArray();
-        bool isWordStart = true;
+        bool isStart = isWordStart;
 
         for (int index = 0; index < letters.Length; index++)
         {
-            letters[index] = isWordStart ? char.ToUpperInvariant(letters[index]) : letters[index];
-            isWordStart = !char.IsLetterOrDigit(letters[index]);
+            char letter = letters[index];
+
+            if (isStart && char.IsLetter(letter))
+            {
+                letters[index] = char.ToUpperInvariant(letter);
+                isStart = false;
+                continue;
+            }
+
+            isStart = IsWordBoundary(letter) || (isStart && !char.IsLetterOrDigit(letter) && !char.IsSurrogate(letter));
         }
 
         return new string(letters);
     }
+
+    private static bool IsWordBoundary(char character) =>
+        !char.IsLetterOrDigit(character)
+        && !char.IsSurrogate(character)
+        && character is not ('\'' or '\u2019' or '.' or ':' or '\u00B7')
+        && CharUnicodeInfo.GetUnicodeCategory(character) is not (UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or UnicodeCategory.EnclosingMark);
 
     private BlockFlow Root(IElement root, Rect content)
     {
@@ -205,8 +268,24 @@ internal sealed class Galley
         return resumed;
     }
 
+    /// <summary>The element a running line's numbers are written into, so their runs can say what they stand for.</summary>
+    internal const string FieldTag = "snail-field";
+
+    /// <summary>The attribute of <see cref="FieldTag"/> naming the number: <c>page</c> or <c>pages</c>.</summary>
+    internal const string FieldKind = "kind";
+
     /// <summary>The computed style of an element under its parent's.</summary>
-    internal Style Compute(IElement element, Style parent) => Styles.Compute(_cascade.Specified(element), parent, _rootFontSize);
+    internal Style Compute(IElement element, Style parent)
+    {
+        Style style = Styles.Compute(_cascade.Specified(element), parent, _rootFontSize);
+
+        if (!IsTag(element, FieldTag))
+        {
+            return style;
+        }
+
+        return style with { Field = element.GetAttribute(FieldKind) == "pages" ? TextField.PageCount : TextField.PageNumber };
+    }
 
     /// <summary>The narrowest and the widest an element's content can be set, its own padding and borders included.</summary>
     /// <remarks>
@@ -221,7 +300,9 @@ internal sealed class Galley
         List<InlineItem> run = [];
         List<(float Min, float Max)> nested = [];
 
-        if (IsTag(element, "img"))
+        _isWordStart = true;
+
+        if (IsPicture(element))
         {
             Append(run, Picture(element, style, basis));
         }
@@ -266,28 +347,41 @@ internal sealed class Galley
                 continue;
             }
 
-            if (IsTag(element, "img"))
+            if (_depth >= Deepest)
             {
-                Append(run, Picture(element, style, basis));
+                run.Add(Flattened(element, parent));
                 continue;
             }
 
-            if (IsTag(element, "table"))
-            {
-                float table = _tables.Width(element, style, basis);
-
-                nested.Add((table, table));
-                continue;
-            }
-
-            if (style.IsBlockLevel)
-            {
-                nested.Add(Intrinsic(element, style, basis));
-                continue;
-            }
-
-            Gather(element, style, run, nested, basis);
+            _depth++;
+            Measure(element, style, run, nested, basis);
+            _depth--;
         }
+    }
+
+    private void Measure(IElement element, Style style, List<InlineItem> run, List<(float Min, float Max)> nested, float basis)
+    {
+        if (IsPicture(element))
+        {
+            Append(run, Picture(element, style, basis));
+            return;
+        }
+
+        if (IsTag(element, "table"))
+        {
+            float table = _tables.Width(element, style, basis);
+
+            nested.Add((table, table));
+            return;
+        }
+
+        if (style.IsBlockLevel)
+        {
+            nested.Add(Intrinsic(element, style, basis));
+            return;
+        }
+
+        Gather(element, style, run, nested, basis);
     }
 
     private static void Append(List<InlineItem> run, InlineItem? item)
@@ -311,7 +405,9 @@ internal sealed class Galley
         Style inner = style with { Background = null, Border = Border.None, BorderRadius = 0 };
         var segments = new Segments(this, inner, x, width, pending);
 
-        if (IsTag(element, "img"))
+        _isWordStart = true;
+
+        if (IsPicture(element))
         {
             segments.Add(Picture(element, inner, width));
 
@@ -345,11 +441,65 @@ internal sealed class Galley
                 continue;
             }
 
-            if (child is IElement element && Compute(element, parent) is { Display: not Display.None } style)
+            if (child is not IElement element || Compute(element, parent) is not { Display: not Display.None } style)
             {
-                Visit(element, style, segments);
+                continue;
+            }
+
+            if (_depth >= Deepest)
+            {
+                segments.Add(Flattened(element, parent));
+                continue;
+            }
+
+            _depth++;
+            Visit(element, style, segments);
+            _depth--;
+        }
+    }
+
+    /// <summary>An element too deep to follow, as the text it holds, said once per document.</summary>
+    private TextRun Flattened(IElement element, Style parent)
+    {
+        if (!_isCapped)
+        {
+            _isCapped = true;
+            _notes.Add(new Note(
+                NoteKind.NestingCapped,
+                element.LocalName,
+                $"Elements are nested more than {Deepest} deep; what lies below that is set as plain text."));
+        }
+
+        return new TextRun(Transformed(TextOf(element), parent.Transform), parent);
+    }
+
+    /// <summary>The text an element holds, read with a stack of its own rather than by recursion.</summary>
+    /// <remarks>
+    /// AngleSharp's own <c>TextContent</c> recurses once per element, so on the very trees this is for it ran out
+    /// of stack itself: 11 670 frames deep at 20 000 nested blocks.
+    /// </remarks>
+    private static string TextOf(IElement element)
+    {
+        var text = new StringBuilder();
+        Stack<INode> waiting = new([element]);
+
+        while (waiting.TryPop(out INode? node))
+        {
+            if (node is IText run)
+            {
+                text.Append(run.Data);
+                continue;
+            }
+
+            INodeList children = node.ChildNodes;
+
+            for (int index = children.Length - 1; index >= 0; index--)
+            {
+                waiting.Push(children[index]);
             }
         }
+
+        return text.ToString();
     }
 
     private void Visit(IElement element, Style style, Segments segments)
@@ -370,7 +520,7 @@ internal sealed class Galley
             return;
         }
 
-        if (IsTag(element, "img"))
+        if (IsPicture(element))
         {
             segments.Add(Picture(element, style, segments.Width));
             return;
@@ -384,10 +534,18 @@ internal sealed class Galley
         segments.Add(after > 0 ? new InlineSpace(after, style) : null);
     }
 
+    /// <summary>Whether the element is a picture set as one unit: an <c>img</c>, or an <c>svg</c> drawn in place.</summary>
+    /// <remarks>
+    /// An <c>svg</c> written into the document is a replaced element exactly as an <c>img</c> is: its text
+    /// belongs to the drawing, and walking into it would set the words of its labels as lines of the page.
+    /// </remarks>
+    private static bool IsPicture(IElement element) => IsTag(element, "img") || IsTag(element, "svg");
+
     private InlineItem? Picture(IElement element, Style style, float containingWidth)
     {
-        string source = element.GetAttribute("src") ?? "";
-        Image? image = _pictures.Read(source);
+        bool isDrawing = IsTag(element, "svg");
+        string source = isDrawing ? "<svg>" : element.GetAttribute("src") ?? "";
+        Image? image = isDrawing ? Svg.Of(element) : _pictures.Read(source);
 
         if (image is not { Width: > 0, Height: > 0 })
         {
@@ -428,7 +586,7 @@ internal sealed class Galley
         float drawnHeight = naturalHeight * scale;
         bool isFramed = declaredWidth is not null && declaredHeight is not null;
 
-        if (!isFramed)
+        if (!isFramed || drawnWidth <= 0 || drawnHeight <= 0)
         {
             return (drawnWidth, drawnHeight, null);
         }

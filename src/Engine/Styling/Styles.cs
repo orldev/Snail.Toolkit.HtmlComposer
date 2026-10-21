@@ -43,17 +43,21 @@ internal static class Styles
             ? CssValues.ReadColor(declaredColor, parent.Color) ?? parent.Color
             : parent.Color;
         float size = font.Size;
+        Display display = DisplayOf(Declared("display"));
+        VerticalAlign verticalAlign = VerticalAlignOf(Declared("vertical-align"));
+        bool isBlock = display is Display.Block or Display.ListItem;
 
         var style = new Style
         {
             Font = font,
             Color = color,
-            Display = DisplayOf(Declared("display")),
+            Display = display,
+            Shift = (isBlock ? 0 : parent.Shift) + ShiftOf(verticalAlign, size),
             LineHeight = LineHeightOf(Declared("line-height"), parent.LineHeight, size, rootFontSize),
             TextAlign = TextAlignOf(Declared("text-align"), parent.TextAlign),
             Decoration = parent.Decoration | DecorationOf(Declared("text-decoration-line") ?? Declared("text-decoration")),
             Transform = TransformOf(Declared("text-transform"), parent.Transform),
-            VerticalAlign = VerticalAlignOf(Declared("vertical-align")),
+            VerticalAlign = verticalAlign,
             ObjectFit = ObjectFitOf(Declared("object-fit")),
             IsCollapsed = IsCollapsed(Declared("border-collapse"), parent.IsCollapsed),
             WhiteSpace = WhiteSpaceOf(Declared("white-space"), parent.WhiteSpace),
@@ -62,7 +66,7 @@ internal static class Styles
             Orphans = CountOf(Declared("orphans"), parent.Orphans),
             Widows = CountOf(Declared("widows"), parent.Widows),
             Margin = SidesOf(specified, Margins, size, rootFontSize),
-            Padding = SidesOf(specified, Paddings, size, rootFontSize),
+            Padding = NonNegative(SidesOf(specified, Paddings, size, rootFontSize)),
             Border = BorderOf(specified, color, size, rootFontSize),
             BorderRadius = Declared("border-top-left-radius")?.Split(' ', StringSplitOptions.RemoveEmptyEntries) is [var radius, ..]
                 ? CssValues.ReadLength(radius, size, rootFontSize)?.Points ?? 0
@@ -109,7 +113,30 @@ internal static class Styles
         var keyword => CssValues.ReadLength(keyword, fontSize, rootFontSize)?.Resolve(fontSize) ?? parent,
     };
 
-    private static float FontSizeOf(string? value, float parentSize, float rootFontSize)
+    /// <summary>The largest font size, in points: a metre and more of type.</summary>
+    /// <remarks>
+    /// Relative sizes compound down the tree, and 140 nested <c>2em</c> reach infinity: every run below set at an
+    /// infinite size and every position after it at NaN. A size is kept within this whatever its ancestors did.
+    /// </remarks>
+    private const float LargestFontSize = 3_000;
+
+    /// <summary>How far <c>sub</c> and <c>super</c> move the baseline, downwards being positive.</summary>
+    /// <remarks>
+    /// CSS fixes no distance; a fifth of the em down and a third up are the usual ones, taken from the element's
+    /// own size, so a smaller face raised in a larger one moves by its own measure.
+    /// </remarks>
+    private static float ShiftOf(VerticalAlign align, float size) => align switch
+    {
+        VerticalAlign.Sub => size * 0.2f,
+        VerticalAlign.Super => size * -0.33f,
+        _ => 0,
+    };
+
+    private static float FontSizeOf(string? value, float parentSize, float rootFontSize) =>
+        Math.Clamp(DeclaredFontSizeOf(value, parentSize, rootFontSize), 0, LargestFontSize);
+
+    /// <remarks>A negative size is not a size, and a browser drops the declaration; so is it dropped here.</remarks>
+    private static float DeclaredFontSizeOf(string? value, float parentSize, float rootFontSize)
     {
         string? keyword = Keyword(value);
 
@@ -132,7 +159,7 @@ internal static class Styles
         {
             "smaller" => parentSize / 1.2f,
             "larger" => parentSize * 1.2f,
-            _ => CssValues.ReadLength(keyword, parentSize, rootFontSize)?.Resolve(parentSize) ?? parentSize,
+            _ => CssValues.ReadLength(keyword, parentSize, rootFontSize)?.Resolve(parentSize) is >= 0 and var size ? size : parentSize,
         };
     }
 
@@ -179,11 +206,11 @@ internal static class Styles
 
         if (CssValues.ReadNumber(keyword) is { } factor)
         {
-            return new LineHeight(factor, IsFactor: true);
+            return factor >= 0 ? new LineHeight(factor, IsFactor: true) : parent;
         }
 
-        return CssValues.ReadLength(keyword, fontSize, rootFontSize) is { } length
-            ? new LineHeight(length.Resolve(fontSize), IsFactor: false)
+        return CssValues.ReadLength(keyword, fontSize, rootFontSize) is { } length && length.Resolve(fontSize) is >= 0 and var points
+            ? new LineHeight(points, IsFactor: false)
             : parent;
     }
 
@@ -262,11 +289,11 @@ internal static class Styles
         _ => parent,
     };
 
-    /// <summary>A counter the markup states, such as where an <c>ol</c> starts, held to what an int can carry.</summary>
+    /// <summary>A count of lines the style declares — <c>orphans</c>, <c>widows</c> — held to what an int can carry.</summary>
     /// <remarks>
     /// The number comes from the markup, and narrowing a float past <see cref="int.MaxValue"/> is undefined
-    /// rather than saturating: <c>start="99999999999"</c> arrived as <see cref="int.MinValue"/> and numbered
-    /// the list from there, counting up towards zero.
+    /// rather than saturating: <c>orphans: 99999999999</c> would arrive as <see cref="int.MinValue"/>, a count
+    /// below one, and quietly stand for none. A count below one is not a count and keeps the parent's.
     /// </remarks>
     private static int CountOf(string? value, int parent)
     {
@@ -289,6 +316,13 @@ internal static class Styles
             SideOf(specified.GetValueOrDefault(properties.Right), fontSize, rootFontSize),
             SideOf(specified.GetValueOrDefault(properties.Bottom), fontSize, rootFontSize),
             SideOf(specified.GetValueOrDefault(properties.Left), fontSize, rootFontSize));
+
+    /// <summary>Sides that may not be negative — a padding — with every negative side read as none, as a browser reads it.</summary>
+    private static Sides NonNegative(Sides sides) =>
+        new(NonNegative(sides.Top), NonNegative(sides.Right), NonNegative(sides.Bottom), NonNegative(sides.Left));
+
+    private static Length? NonNegative(Length? length) =>
+        length is { } side && (side.Points < 0 || side.Percent < 0) ? new Length(0) : length;
 
     private static Length? SideOf(string? value, float fontSize, float rootFontSize) => Keyword(value) switch
     {
@@ -338,16 +372,17 @@ internal static class Styles
         null or "medium" or "initial" => Points.FromPixels(3),
         "thin" => Points.FromPixels(1),
         "thick" => Points.FromPixels(5),
-        var keyword => CssValues.ReadLength(keyword, fontSize, rootFontSize)?.Points ?? Points.FromPixels(3),
+        var keyword => CssValues.ReadLength(keyword, fontSize, rootFontSize)?.Points is >= 0 and var width ? width : Points.FromPixels(3),
     };
 
     private static Rgba? BackgroundOf(string? value, Rgba color) =>
         value is not null && CssValues.ReadColor(value, color) is { IsVisible: true } paint ? paint : null;
 
+    /// <remarks>A negative width or height is not a size, and a browser drops the declaration; it reads here as <c>auto</c>.</remarks>
     private static Length? SizeOf(string? value, float fontSize, float rootFontSize) => Keyword(value) switch
     {
         null or "auto" or "none" or "initial" => null,
-        var keyword => CssValues.ReadLength(keyword, fontSize, rootFontSize),
+        var keyword => CssValues.ReadLength(keyword, fontSize, rootFontSize) is { Points: >= 0, Percent: >= 0 } length ? length : null,
     };
 
     private static BreakRule BreakOf(string? value) => Keyword(value) switch
