@@ -28,7 +28,7 @@
     suffix without a word, and that kind of no-op is noticed only once the wrong file is in the feed.
   -->
   <PropertyGroup>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <!-- The last release on NuGet: a pack fails on any change that would break a user of it. Raised with each release. -->
     <SnailPackageBaseline>0.2.0</SnailPackageBaseline>
     <Authors>Toolkit</Authors>
