@@ -52,6 +52,16 @@ What a box on a page stands for.
 | `const BoxKind Marker` | The bullet of a list item, drawn as a shape rather than set as a glyph. |
 | `const BoxKind Sheet` | The sheet itself, painted edge to edge beneath everything set on it. |
 
+### enum CellAlignment
+
+Where the content of a table cell sits between its top and bottom.
+
+| Member | Summary |
+| --- | --- |
+| `const CellAlignment Bottom` | At the foot. |
+| `const CellAlignment Middle` | In the middle. |
+| `const CellAlignment Top` | At the top, which is also where a cell aligned on the baseline is given back. |
+
 ### class Composition
 
 A document set into pages, with a note for everything that could not be set as written.
@@ -128,6 +138,7 @@ An encoded picture with its natural size.
 | Member | Summary |
 | --- | --- |
 | `Image(byte[] Content, int Width, int Height)` | An encoded picture with its natural size. |
+| `bool IsVector { get; init; }` | Whether the bytes are SVG markup to be drawn as shapes rather than pixels to be decoded. |
 | `byte[] Content { get; init; }` | The encoded bytes, in whatever format the renderer decodes. |
 | `int Height { get; init; }` | Natural height in CSS pixels. |
 | `int Width { get; init; }` | Natural width in CSS pixels. |
@@ -164,8 +175,10 @@ Which of the things that could not be set as written a note reports.
 | `const NoteKind BoldSubstituted` | Bold was asked of a family with no bold face, and the regular face set it. |
 | `const NoteKind CffOutlines` | A face has CFF outlines, which the format embeds poorly or cannot carry at all. |
 | `const NoteKind FamilySubstituted` | No loaded family matched what the text asked for, and the first family loaded set it. |
+| `const NoteKind FormatLimit` | The output format cannot hold something as it was set, and it was fitted to what the format allows. |
 | `const NoteKind MissingGlyph` | A face has no glyph for a character, which prints as a crossed box. |
 | `const NoteKind MissingPicture` | A picture could not be read, and its `alt` text stands in its place. |
+| `const NoteKind NestingCapped` | Markup nested deeper, or a drawing larger, than the limits allow: the layout set the rest as plain text, a drawing left it undrawn. |
 | `const NoteKind NoFonts` | No fonts were loaded, so the machine's default face set the text. |
 | `const NoteKind SpanCapped` | A cell asked to cover more columns or rows than a table may hold, and its span was capped. |
 
@@ -177,8 +190,11 @@ One finished page, everything on it positioned in points from its top-left corne
 | --- | --- |
 | `IReadOnlyList<ImageBox> Images { get; init; }` | Pictures scaled into place. |
 | `IReadOnlyList<RenderBox> Boxes { get; init; }` | Element boxes with their backgrounds and borders. |
+| `IReadOnlyList<TableFrame> Tables { get; init; }` | The tables on the page as grids, for a renderer that has tables of its own. |
+| `IReadOnlyList<TextFrame> Texts { get; init; }` | The blocks of text on the page as paragraphs, for a renderer whose text flows again on its own. |
 | `IReadOnlyList<TextSpan> Spans { get; init; }` | Runs of text. |
 | `Page(int Number, float Width, float Height, IReadOnlyList<RenderBox> Boxes, IReadOnlyList<ImageBox> Images, IReadOnlyList<TextSpan> Spans)` | One finished page, everything on it positioned in points from its top-left corner. |
+| `Running? Running { get; init; }` | What the running header, footer and side note put on this page; `null` when there are none. |
 | `float Height { get; init; }` | Page height. |
 | `float Width { get; init; }` | Page width. |
 | `int Number { get; init; }` | The page number, starting at 1. |
@@ -270,6 +286,19 @@ A colour with straight, not premultiplied, alpha.
 | `byte G { get; init; }` | Green, 0 to 255. |
 | `byte R { get; init; }` | Red, 0 to 255. |
 
+### class Running
+
+What the running header, footer and side note put on one page.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<ImageBox> Images { get; init; }` | Their pictures; the same objects as in `Images`. |
+| `IReadOnlyList<RenderBox> Boxes { get; init; }` | Their boxes; the same objects as in `Boxes`. |
+| `IReadOnlyList<TableFrame> Tables { get; init; }` | The tables of the running lines as grids. |
+| `IReadOnlyList<TextFrame> Texts { get; init; }` | The blocks of text of the running lines as paragraphs. |
+| `IReadOnlyList<TextSpan> Spans { get; init; }` | Their runs; the same objects as in `Spans`. |
+| `Running(IReadOnlyList<RenderBox> Boxes, IReadOnlyList<ImageBox> Images, IReadOnlyList<TextSpan> Spans)` | What the running header, footer and side note put on one page. |
+
 ### class Section
 
 One run of pages of a document, with the sheet those pages are made up on.
@@ -279,6 +308,70 @@ One run of pages of a document, with the sheet those pages are made up on.
 | `PageSetup Setup { get; init; }` | The sheet its pages are made up on. |
 | `Section(string Html, PageSetup Setup)` | One run of pages of a document, with the sheet those pages are made up on. |
 | `string Html { get; init; }` | The markup set in this run. |
+
+### static class Svg
+
+Tells SVG markup from an encoded raster picture, and the natural size the markup asks for.
+
+| Member | Summary |
+| --- | --- |
+| `Image? Read(byte[] content)` | The picture SVG markup makes, sized as its root asks, or nothing when the bytes hold no drawing. |
+| `bool IsMarkup(ReadOnlySpan<byte> content)` | Whether the bytes are SVG markup rather than an encoded picture. |
+
+### class TableCell
+
+One cell of a table as it was set on a page.
+
+| Member | Summary |
+| --- | --- |
+| `BorderSide Bottom { get; init; }` | The rule along the bottom edge, or a side of width zero where none is drawn. |
+| `BorderSide Top { get; init; }` | The rule along the top edge, or a side of width zero where none is drawn. |
+| `CellAlignment Alignment { get; init; }` | Where the content sits between top and bottom. |
+| `Edges Padding { get; init; }` | How far the content stands in from each side of the cell. For a cell aligned at the top this is measured to where its first line really begins, so a cell lowered onto the baseline of its neighbours keeps its place. |
+| `IReadOnlyList<TextParagraph> Paragraphs { get; init; }` | The text of the cell as paragraphs. |
+| `ImageBox? Picture { get; init; }` | The one picture a cell holds without any text, which a renderer may paint as the cell's fill. |
+| `Rect Bounds { get; init; }` | The cell on the page, as tall as its row. |
+| `Rgba? Background { get; init; }` | The fill of the cell, or of its row; `null` when none is painted. |
+| `TableCell(int Column, int Span, Rect Bounds, Edges Padding, CellAlignment Alignment, BorderSide Top, BorderSide Bottom, Rgba? Background, IReadOnlyList<TextParagraph> Paragraphs, ImageBox? Picture)` | One cell of a table as it was set on a page. |
+| `int Column { get; init; }` | The first column the cell covers, counted from zero. |
+| `int Span { get; init; }` | How many columns the cell covers. |
+
+### class TableFrame
+
+The part of a table that landed on one page, as columns, rows and cells.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<ImageBox> CellImages { get; init; }` | The pictures the cells hold beside their text, which a renderer drawing the table as one object paints after it. |
+| `IReadOnlyList<RenderBox> Boxes { get; init; }` | The boxes of the table, its rows and its cells; the same objects as in `Boxes`. |
+| `IReadOnlyList<RenderBox> CellBoxes { get; init; }` | What the cells hold beyond their text: the boxes of blocks inside them, markers, painted inline runs. |
+| `IReadOnlyList<TableRow> Rows { get; init; }` | The rows on this page, the repeated heading first. |
+| `IReadOnlyList<float> Columns { get; init; }` | The width of every column, left to right. |
+| `Rect Bounds { get; init; }` | The grid on the page: from the left of its first column to the right of its last. |
+| `TableFrame(Rect Bounds, IReadOnlyList<float> Columns, IReadOnlyList<TableRow> Rows, IReadOnlyList<RenderBox> Boxes)` | The part of a table that landed on one page, as columns, rows and cells. |
+
+### class TableRow
+
+One row of a table on a page.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<TableCell> Cells { get; init; }` | The cells from left to right. |
+| `TableRow(float Top, float Height, bool IsHeader, IReadOnlyList<TableCell> Cells)` | One row of a table on a page. |
+| `bool IsHeader { get; init; }` | Whether the row heads the table and is repeated on every page it reaches. |
+| `float Height { get; init; }` | The height of the row. |
+| `float Top { get; init; }` | The top of the row on the page. |
+
+### enum TextAlignment
+
+How the lines of a paragraph sit between its edges.
+
+| Member | Summary |
+| --- | --- |
+| `const TextAlignment Center` | Centred between the edges. |
+| `const TextAlignment Justify` | Stretched to both edges, all but the last line. |
+| `const TextAlignment Left` | Against the left edge. |
+| `const TextAlignment Right` | Against the right edge. |
 
 ### enum TextDecoration
 
@@ -290,6 +383,48 @@ Lines drawn together with a run of text.
 | `const TextDecoration None` | No line. |
 | `const TextDecoration Underline` | A line under the text. |
 
+### enum TextField
+
+What a run of a running line stands for, beyond its characters.
+
+| Member | Summary |
+| --- | --- |
+| `const TextField None` | Ordinary text. |
+| `const TextField PageCount` | The number of pages in the document, written for `{pages}`. |
+| `const TextField PageNumber` | The number of the page, written for `{page}`. |
+
+### class TextFrame
+
+A block of text on a page — a heading, a paragraph, a caption — as paragraphs rather than placed runs.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<TextParagraph> Paragraphs { get; init; }` | The paragraphs in reading order. |
+| `Rect Bounds { get; init; }` | The content box of the block on this page: where its lines may run. |
+| `TextFrame(Rect Bounds, IReadOnlyList<TextParagraph> Paragraphs)` | A block of text on a page — a heading, a paragraph, a caption — as paragraphs rather than placed runs. |
+
+### class TextLine
+
+One line of a paragraph as it was set on the page.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<TextSpan> Spans { get; init; }` | The runs of the line; the same objects as in `Spans`. |
+| `TextLine(float Top, float Height, IReadOnlyList<TextSpan> Spans, bool IsWrappedAtSpace)` | One line of a paragraph as it was set on the page. |
+| `bool IsWrappedAtSpace { get; init; }` | Whether the line ran out of room at a space, which the break swallowed; joining it to the next line takes a space back between them. A line parted inside a word joins its successor directly. |
+| `float Height { get; init; }` | The height of the line box. |
+| `float Top { get; init; }` | The top of the line box on the page. |
+
+### class TextParagraph
+
+A paragraph: lines that break only where they ran out of room, ended by a forced break or by its block.
+
+| Member | Summary |
+| --- | --- |
+| `IReadOnlyList<TextLine> Lines { get; init; }` | The lines in reading order. |
+| `TextAlignment Alignment { get; init; }` | How its block aligns the lines. |
+| `TextParagraph(TextAlignment Alignment, IReadOnlyList<TextLine> Lines)` | A paragraph: lines that break only where they ran out of room, ended by a forced break or by its block. |
+
 ### class TextSpan
 
 A run of text in one font and colour, on one line of one page.
@@ -299,6 +434,7 @@ A run of text in one font and colour, on one line of one page.
 | `Font Font { get; init; }` | The font the run was measured with and has to be drawn with. |
 | `Rgba Color { get; init; }` | The text colour. |
 | `TextDecoration Decoration { get; init; }` | Lines drawn together with the text. |
+| `TextField Field { get; init; }` | Which number of a running line this run is, if it is one. |
 | `TextSpan(string Text, float X, float Baseline, float Width, Font Font, Rgba Color, TextDecoration Decoration = 0)` | A run of text in one font and colour, on one line of one page. |
 | `float Baseline { get; init; }` | Vertical position of the baseline. |
 | `float Width { get; init; }` | The advance width the engine measured, which a renderer uses to draw decorations. |
@@ -314,3 +450,4 @@ Sets HTML and CSS into pages: parses the markup, lays it out and cuts it into pa
 | `Composition Compose(IReadOnlyList<Section> sections, CancellationToken ct = default)` | Sets a document of several sections, each on its own sheet, into one run of pages. |
 | `Composition Compose(string html, PageSetup setup, CancellationToken ct = default)` | Sets a document into pages of the given size and margins. |
 | `Typesetter(ITextMeasurer measurer, IImageSource? images = null)` | Sets HTML and CSS into pages: parses the markup, lays it out and cuts it into pages. |
+| `bool IsStructured { get; init; }` | Whether pages also carry their blocks of text and their tables as structure, in `Texts` and `Tables`. |

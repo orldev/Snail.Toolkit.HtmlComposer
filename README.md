@@ -24,8 +24,9 @@ need a real browser engine, use one.
 | Real pagination: page breaks, orphans/widows, repeating table headers | JavaScript, floats, `position`, flex, grid |
 | Running headers/footers with `{page} / {pages}` | `@page`, `@font-face`, `@media (min-width: …)` |
 | Fonts embedded in the file (Cyrillic included, searchable and copyable) | Arabic/Devanagari shaping, per-glyph font fallback |
-| Tables that split across pages, `colspan`/`rowspan`, `border-collapse` | SVG and other vector pictures |
-| No network calls, ever — safe to feed user-authored HTML | Fetching `http://` images for you |
+| Tables that split across pages, `colspan`/`rowspan`, `border-collapse` | SVG gradients, masks, filters and `<style>` sheets |
+| SVG drawn as vectors, its labels as real text in the document's fonts | |
+| No network calls, ever, and [hard limits](#limits-on-what-a-document-may-ask) on what markup may ask — safe to feed user-authored HTML | Fetching `http://` images for you |
 
 ---
 
@@ -81,6 +82,11 @@ Three rules that save a lot of debugging:
   which is fine.)
 - **Load everything before the first conversion.** After that the library is read-only and safe to share
   between threads.
+
+A PDF carries each face **cut down to the glyphs it draws**: a page of two letters in PT Sans weighs a few
+kilobytes of font rather than 440. Glyph numbers and advances are kept, so the text is drawn exactly as it was
+measured and still searched and copied. A face whose maker forbids subsetting (bit 8 of `fsType`) is embedded
+whole, as the licence asks; so is a CFF `.otf`, which is drawn as Type 3 anyway.
 
 Asking for a family that is not loaded falls back to the **first family you loaded**, and you get a note about
 it. Generic names — `sans-serif`, `monospace` — resolve to that same fallback silently.
@@ -138,6 +144,8 @@ int pageCount = composition.Pages.Count;
 | `MissingGlyph` | A character the chosen face has no glyph for — it prints as a crossed box. |
 | `NoFonts` | You loaded no fonts at all. |
 | `SpanCapped` | A `colspan`/`rowspan` exceeded the limit and was capped. |
+| `NestingCapped` | Markup or a drawing went deeper or larger than the [limits](#limits-on-what-a-document-may-ask); the rest was set as plain text, or left undrawn. |
+| `FormatLimit` | The output format could not hold something as set — a deck has one slide size — and it was fitted. |
 
 Each note carries `Kind`, the `Subject` it is about (the picture source, the font family) and a `Text` sentence.
 
@@ -249,7 +257,7 @@ Only two sources are read, and **nothing is ever fetched over the network**:
 1. `data:` URIs — `<img src="data:image/png;base64,...">`
 2. Files under `BaseDirectory`
 
-Raster only (PNG, JPEG, …). An **SVG is not read** — it is replaced by its `alt` text with a note.
+Raster pictures (PNG, JPEG, …) and **SVG drawings** — see [Drawings (SVG)](#drawings-svg).
 
 A path that leads outside `BaseDirectory` is refused, symbolic links included. HTML is often written by users,
 and without that fence `<img src="../../keys.png">` would copy any file the process can read into the document.
@@ -304,6 +312,10 @@ services.AddFonts(…).AddHtmlToPdf(new PdfOptions { Images = new StoragePicture
 Returning `null` is an ordinary outcome: the picture is left out, its `alt` text stands in and a
 `MissingPicture` note names the source.
 
+The built-in sources refuse a raster past 50 million pixels; a source of your own is trusted with what it
+returns. A renderer decodes the whole raster to draw it, so check `codec.Info` against a limit of your own before
+handing back a picture someone else uploaded.
+
 ### Sizing and fitting
 
 - A picture takes its natural size at 96 dpi, or whatever `width`/`height` (attribute or CSS) asks for, and is
@@ -311,6 +323,48 @@ Returning `null` is an ordinary outcome: the picture is left out, its `alt` text
 - `object-fit: fill` (the CSS default) stretches; `cover` keeps the frame and crops from the middle; `contain`
   keeps the whole picture and shrinks the frame to match.
 - `vertical-align: middle` centres a picture against the text of its line — what an icon beside a heading needs.
+
+---
+
+## Drawings (SVG)
+
+An SVG is a picture like any other: write it straight into the markup, or point an `<img>` at it — a file under
+`BaseDirectory`, a `data:image/svg+xml;base64,…` URI, or a plain-text one such as
+`data:image/svg+xml,%3Csvg…`. It takes room exactly as an `<img>` does, from `width`/`height`, CSS, or its
+natural size.
+
+```html
+<p>The shaft, as the block sees it:</p>
+<svg viewBox="0 0 120 60" style="width:240pt">
+  <rect x="10" y="10" width="40" height="40" fill="#0a0a0a"/>
+  <line x1="60" y1="30" x2="110" y2="30" stroke="#ff3b00" stroke-width="2"/>
+  <text x="60" y="55" font-family="Suisse Intl" font-size="8">Floor 5</text>
+</svg>
+```
+
+- **In a PDF it stays a drawing.** Shapes are written as paths, sharp at any zoom, and every label is set as
+  text in the faces of the `FontLibrary` — searched, copied, and falling back to the first loaded family like
+  the rest of the page. Nothing is turned into pixels.
+- **In a deck it becomes a picture.** A slide holds pictures, not markup, so the drawing is rendered to PNG at
+  four pixels to each of its own, no side longer than 4096.
+- **Natural size** is read the way a browser reads the root: absolute `width`/`height` (`px`, `pt`, `mm`, `cm`,
+  `in`, `pc`), the `viewBox` proportions for a missing side, the `viewBox` itself in CSS pixels when neither is
+  given, and 300 × 150 when there is nothing to go by.
+- **Drawn:** `rect` (with `rx`/`ry`), `circle`, `ellipse`, `line`, `polyline`, `polygon`, `path`, `text` with
+  `tspan`, `g`, nested `svg`, `use`; `fill`, `stroke`, `stroke-width`, `stroke-dasharray`, `stroke-linecap`,
+  `stroke-linejoin`, `fill-rule`, `opacity`, `fill-opacity`, `stroke-opacity`, `transform`, `viewBox` with
+  `preserveAspectRatio`, `font-family`, `font-size`, `font-weight`, `font-style`, `letter-spacing`,
+  `text-anchor`, `visibility`, `display`, `currentColor` — as presentation attributes or in the `style`
+  attribute.
+- **Not drawn:** gradients, patterns, masks, clip paths, filters, markers, pictures inside the drawing and
+  `<style>` sheets. A fill that names a gradient falls back to the colour written after it, or to none.
+
+A drawing is drawn within a budget: elements nested deeper than 256 and anything past 20 000 drawn elements —
+each `use` counting as drawn again — are left undrawn, and a `NestingCapped` note names the picture. Groups with
+an `opacity` are composited through at most four layers at once; deeper ones fade their own shapes instead.
+
+`Drawings.Draw` and `Drawings.Rasterized` in the Fonts package draw the same thing onto any Skia canvas, for a
+renderer of your own. Both take a `CancellationToken`, looked at while the drawing is walked.
 
 ---
 
@@ -421,7 +475,7 @@ Headings are kept with what follows them, and every page is guaranteed to make p
 - **Text:** hyphenation, complex-script shaping (Arabic, Devanagari), per-glyph fallback to another family.
   A face has to cover the text it sets — a monospaced face with no Cyrillic will not quietly borrow letters
   from elsewhere the way a design tool does.
-- **Pictures:** SVG and any other vector format.
+- **Pictures:** vector formats other than SVG, and the parts of SVG listed under [Drawings (SVG)](#drawings-svg).
 
 ---
 
@@ -441,15 +495,38 @@ var deck = new HtmlToPptx(fonts, new PptxOptions
 byte[] pptx = deck.Convert(html);
 ```
 
-**What to expect.**
+**What to expect.** The deck is written in PowerPoint's own objects wherever the engine can say what a thing
+is, so it is edited the way any deck is — a price changed in a cell stays in its cell, a sentence added to a
+paragraph wraps inside its box:
 
-- Each box becomes a shape; each run of text becomes its own text box with wrapping **off** — the engine has
-  already broken the lines, and letting PowerPoint re-flow them would throw away the layout.
+- **A table is a PowerPoint table** (`a:tbl`): a column per width the page settled, rows as tall as the page
+  made them, `colspan` as merged cells. A cell draws only the rules above and below it — where two rows
+  disagree, the heavier rule — and nothing at its sides; its padding is the cell's margins and `vertical-align`
+  its anchor (`baseline` reads as top, at the height the baseline put it). Each cell is one text body: every
+  block or `<br>` inside is a paragraph of its own, in its own size and colour. A picture alone in a cell is the
+  cell's **fill**, inset by the cell's padding, so it moves with its row. The plain table style ("No Style, No
+  Grid") is used, so PowerPoint adds no banding of its own.
+- **A table cut by the page** continues as a *new* table on the next slide, opening with its `thead` again.
+  A table with a `rowspan` or a table inside a cell has no place in a grid of simple rows and is drawn as boxes
+  and runs instead.
+- **A block of text is one text box** holding its paragraphs, wrapping at the width of the block; the line
+  spacing is the line height the page used, and the space between paragraphs is what the page left between them.
+  A block whose lines carry pictures or painted inline boxes keeps its runs placed one by one, each a text box
+  with wrapping off where the engine set it.
+- **Running lines go onto the slide layout.** The header and footer are drawn once and shown on every slide
+  made from them; `{page}` becomes PowerPoint's own slide number, which follows the slides as they are moved.
+  PowerPoint has no field for the number of slides, so `{pages}` stays the number written, as text of the
+  layout — corrected in one place (View → Slide Master) if the deck grows.
+- A border side drawn on its own — a rule under a heading — is a line, not a thin rectangle.
 - Pictures are stored once however many slides show them, cropped where `object-fit` cropped them.
-- Every slide states its own white background, so nothing depends on the reader's system colours.
+- Every slide states its own background — the sheet colour, or white — so nothing depends on the reader's
+  system colours, and the running lines of the layout stay visible on top of it.
 - The faces travel inside the deck, grouped by family (regular/bold/italic/bold-italic), and only the faces the
   text actually uses. Only TrueType can travel — a CFF `.otf` is named in the notes instead. Set
   `EmbedFonts = false` when a licence forbids passing a face on, or when every reader has the fonts anyway.
+- `Typefaces` names a family after another face in the deck: measure in Arimo, which is drawn to Arial's
+  widths, and hand the reader `Arial` — `Typefaces = new Dictionary<string, string> { ["Arimo"] = "Arial" }`.
+  A renamed family is not embedded; its text asks for the face every reader already has.
 
 **Caveats worth knowing before you ship.** A deck is an *editable document*, not a proof:
 
@@ -458,6 +535,9 @@ byte[] pptx = deck.Convert(html);
 - A slide places a text box by its top edge while the engine places text on its baseline, so the top is derived
   from the ascent of the measured face — exact for that face, approximate for a substitute.
 - PowerPoint and Keynote each import with their own engine. Neither is this one.
+- **A deck has one slide size.** Sections of different sheets are set on the first one's slide, and a
+  `FormatLimit` note says so; PowerPoint's own limits on font size, line spacing and slide size are kept to the
+  same way.
 
 ---
 
@@ -493,6 +573,27 @@ Composition composition = pdf.Write(html, stream, PageSetup.A4, ct);
 // OperationCanceledException if ct fires — what reached the stream by then is not a document
 ```
 
+Nothing reaches the stream until the whole document is drawn: the PDF is written into memory first and copied
+out at the end. A stream that fails — closed, read-only, a client gone — throws its own `IOException` from
+`Write` and leaves the process standing.
+
+### Limits on what a document may ask
+
+Markup can come from anyone, so the engine sets bounds on what it will do for one document. Past each one the
+document is still written, and a note says what was given up:
+
+| Limit | Past it |
+| --- | --- |
+| Elements nested 256 deep | The words below are set as plain text in their block; `NestingCapped`. |
+| A length of 1 000 000 units, a font size of 3 000 points | Cut to the limit; a value that is not a finite number is not read. |
+| A raster of 50 000 000 pixels (built-in picture sources) | Left out like an unreadable picture; `MissingPicture`. |
+| An SVG 256 deep or of 20 000 drawn elements | The rest is undrawn; `NestingCapped`. |
+| Roman list numbers past 3 999 | Written in figures, as a browser does. |
+| A `colspan`/`rowspan` of more than 1 000 | Capped at 1 000; `SpanCapped`. |
+
+A sheet that is not a finite size is refused with an `ArgumentException`: that is a caller's mistake, not a
+document's.
+
 ---
 
 ## Linux and containers
@@ -512,7 +613,7 @@ fontconfig nor any installed fonts**. Every face comes from your `FontLibrary`. 
 | Bold text does not look bold | No bold face loaded for that family — there is no synthetic bold. Check `BoldSubstituted`. |
 | Cyrillic (or any script) prints as crossed boxes | The chosen face has no glyphs for it. Check `MissingGlyph` notes; there is no per-glyph fallback. |
 | PDF text cannot be searched or copied | A CFF `.otf` face — load the `.ttf` version. Check `CffOutlines`. |
-| Images are missing | `data:`/local files only, never the network; the path must sit under `BaseDirectory`; SVG is not read. Check `MissingPicture`. |
+| Images are missing | `data:`/local files only, never the network; the path must sit under `BaseDirectory`. Check `MissingPicture`. |
 | Columns are stacked instead of side by side | Flex and grid are laid out as plain blocks. Use a table. |
 | Header/footer overlaps the text | The band is as tall as the margin and nothing is clipped — widen the margin. |
 | `ObjectDisposedException` from the font library | The library was disposed while a conversion was still running, or a `using` closed too early. |
@@ -550,7 +651,8 @@ public sealed class HtmlToSvg(FontLibrary fonts, SvgOptions? options = null)
 {
     protected override void Write(Composition composition, Stream output, Faces faces, CancellationToken ct)
     {
-        // draw composition.Pages; faces.For(span.Font) is the font object the run was measured with
+        // draw composition.Pages; faces.For(span.Font) is the font object the run was measured with.
+        // A format that embeds the faces it draws with draws with faces.Subset(composition) instead.
     }
 
     // optional: a note for whatever your format cannot carry
@@ -565,6 +667,25 @@ What a writer receives, per page:
   A box cut by a page boundary carries `IsSplitAbove`/`IsSplitBelow` and draws no rule on that side.
 - **`ImageBox`** — a picture and its frame, with `Source` naming the visible part when `object-fit` cropped it.
 - **`TextSpan`** — one run at `X` on its `Baseline`, with its `Font`, colour, decoration and measured width.
+  `Field` marks the runs a running line wrote for `{page}` and `{pages}`.
+
+And, for a writer whose own objects reflow — a deck, a word processor — the same page told as structure. Every
+box, run and picture named here is also in the lists above, so a writer that uses it skips what it has drawn:
+
+- **`Texts`** — blocks of text as `TextFrame`s: the block's content box and its paragraphs, each line with its
+  runs and whether it wrapped at a space.
+- **`Tables`** — tables as `TableFrame`s: column widths, rows, and cells with their span, padding, alignment,
+  the rule on each horizontal edge, their paragraphs and a picture that fills them.
+- **`Running`** — what the header, footer and side note put on the page, told apart from the content.
+
+Telling the page as structure costs time and memory, so the engine does it only for a writer that asks:
+override `IsStructured` to return `true`. Otherwise `Texts` and `Tables` stay empty. A table drawn as one object
+of its own covers what lies inside its cells; `TableFrame.CellBoxes` and `CellImages` are those boxes and
+pictures, for drawing after the table.
+
+```csharp
+protected override bool IsStructured => true;
+```
 
 ---
 
@@ -610,8 +731,8 @@ Weigh any change to the cascade, the line breaker or the paginator against these
 ### Packaging
 
 ```bash
-dotnet pack                            # 0.2.0
-dotnet pack -p:VersionSuffix=local     # 0.2.0-local, for a local feed
+dotnet pack                            # 0.3.0
+dotnet pack -p:VersionSuffix=local     # 0.3.0-local, for a local feed
 ```
 
 The version is a *prefix* in `Directory.Build.props`, so a suffix reaches the package. A release is a tag:

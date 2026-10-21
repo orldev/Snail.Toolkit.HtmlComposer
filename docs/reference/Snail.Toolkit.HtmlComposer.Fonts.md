@@ -18,6 +18,7 @@ Turns HTML into a document: lays the markup out into pages and hands them to a w
 | `FontLibrary Library { get; }` | The faces documents are set in. |
 | `IEnumerable<Note> NotesFor(Composition composition)` | What the renderer has to say beyond the faces: whatever its format could not carry. |
 | `TOptions Options { get; }` | What the renderer was asked for. |
+| `bool IsStructured { get; }` | Whether the renderer reads the pages' text and tables as structure; see `IsStructured`. |
 | `byte[] Convert(IReadOnlyList<Section> sections, CancellationToken ct = default)` | The document whose sections are set on sheets of their own, as bytes. |
 | `byte[] Convert(string html, PageSetup? setup = null, CancellationToken ct = default)` | The document, as bytes. |
 | `void Render(Composition composition, Stream output, CancellationToken ct = default)` | Writes pages laid out earlier by `Typeset` into a stream. |
@@ -37,12 +38,22 @@ What every document has in common: where its pictures come from and what it says
 | `string? Subject { get; init; }` | What the document is about, in a sentence. |
 | `string? Title { get; init; }` | What a reader shows as the name of the document. |
 
+### static class Drawings
+
+Draws SVG pictures onto a Skia canvas as shapes and text, at whatever size the frame asks.
+
+| Member | Summary |
+| --- | --- |
+| `byte[] Rasterized(Image image, int width, int height, Faces faces, CancellationToken ct = default)` | The picture drawn into PNG pixels of the given size, on a transparent ground. |
+| `void Draw(SKCanvas canvas, Image image, SKRect frame, Faces faces, Rect? source = null, CancellationToken ct = default)` | Draws a vector picture into a frame of the canvas, or only the part a crop names. |
+
 ### class Faces
 
 The faces of one conversion, used both to measure text and to draw it.
 
 | Member | Summary |
 | --- | --- |
+| `Faces Subset(Composition composition, CancellationToken ct = default)` | The same faces cut down to the glyphs a composition draws, for a writer that embeds what it draws with. |
 | `Faces(FontLibrary library)` | The faces of one conversion, used both to measure text and to draw it. |
 | `FontMetrics MetricsOf(Font font)` | The vertical metrics of the face the renderer draws the font with. |
 | `IEnumerable<Rune> Missing(string text, Font font)` | The characters of the text the face has no glyph for. |

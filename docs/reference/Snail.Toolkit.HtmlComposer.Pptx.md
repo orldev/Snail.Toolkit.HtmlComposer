@@ -12,6 +12,7 @@ Turns HTML into a PowerPoint deck: lays the markup out into pages and writes the
 | --- | --- |
 | `HtmlToPptx(FontLibrary fonts, PptxOptions? options = null)` | Turns HTML into a PowerPoint deck: lays the markup out into pages and writes them as slides. |
 | `IEnumerable<Note> NotesFor(Composition composition)` | A note for every family asked to travel inside the deck that cannot. |
+| `bool IsStructured { get; }` | Whether the renderer reads the pages' text and tables as structure; see `IsStructured`. |
 | `void Write(Composition composition, Stream output, Faces faces, CancellationToken ct)` | Writes composed pages in the renderer's own format, with the faces they were measured in. |
 
 ### static class HtmlToPptxRegistration
@@ -28,6 +29,7 @@ What a deck accepts beyond what every document does.
 
 | Member | Summary |
 | --- | --- |
+| `IReadOnlyDictionary<string, string> Typefaces { get; init; }` | Families the deck names after another face, such as Arimo set as Arial; none unless given. |
 | `PptxOptions()` |  |
 | `bool EmbedFonts { get; init; }` | Whether the faces the document is set in travel inside the deck. On unless turned off. |
 | `string? Language { get; init; }` | The BCP 47 tag the text is marked with, such as `ru-RU`; none unless given. |
