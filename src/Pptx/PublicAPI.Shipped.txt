@@ -19,3 +19,5 @@ Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.PptxOptions() -> void
 static Snail.Toolkit.HtmlComposer.Pptx.HtmlToPptxRegistration.AddHtmlToPptx(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.operator !=(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? left, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? right) -> bool
 static Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.operator ==(Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? left, Snail.Toolkit.HtmlComposer.Pptx.PptxOptions? right) -> bool
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Typefaces.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Snail.Toolkit.HtmlComposer.Pptx.PptxOptions.Typefaces.init -> void

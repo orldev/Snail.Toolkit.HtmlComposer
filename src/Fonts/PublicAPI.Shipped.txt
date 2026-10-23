@@ -84,3 +84,8 @@ virtual Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.Equals(Snail.Toolkit.Ht
 virtual Snail.Toolkit.HtmlComposer.Fonts.DocumentOptions.PrintMembers(System.Text.StringBuilder! builder) -> bool
 ~override Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.Equals(object obj) -> bool
 ~override Snail.Toolkit.HtmlComposer.Fonts.FontLibrary.EmbeddedFace.ToString() -> string
+Snail.Toolkit.HtmlComposer.Fonts.Drawings
+Snail.Toolkit.HtmlComposer.Fonts.Faces.Subset(Snail.Toolkit.HtmlComposer.Engine.Composition! composition, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> Snail.Toolkit.HtmlComposer.Fonts.Faces!
+static Snail.Toolkit.HtmlComposer.Fonts.Drawings.Draw(SkiaSharp.SKCanvas! canvas, Snail.Toolkit.HtmlComposer.Engine.Image! image, SkiaSharp.SKRect frame, Snail.Toolkit.HtmlComposer.Fonts.Faces! faces, Snail.Toolkit.HtmlComposer.Engine.Rect? source = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> void
+static Snail.Toolkit.HtmlComposer.Fonts.Drawings.Rasterized(Snail.Toolkit.HtmlComposer.Engine.Image! image, int width, int height, Snail.Toolkit.HtmlComposer.Fonts.Faces! faces, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> byte[]!
+virtual Snail.Toolkit.HtmlComposer.Fonts.Converter<TOptions>.IsStructured.get -> bool
