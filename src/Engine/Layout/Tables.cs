@@ -244,20 +244,22 @@ internal sealed class Tables(Galley galley)
         float x,
         float width)
     {
-        var frame = new BlockFrame(
-            row.Element.LocalName,
-            x,
-            width,
-            row.Style.Border,
-            default,
-            row.Style.Background,
-            row.Style.BreakBefore,
-            row.Style.BreakAfter,
-            row.Style.AvoidsBreakInside,
-            row.Style.Orphans,
-            row.Style.Widows,
-            null,
-            row.Style.BorderRadius);
+        var frame = row.Element is null
+            ? new BlockFrame("", x, width, Border.None, default, null, BreakRule.Auto, BreakRule.Auto, false, row.Style.Orphans, row.Style.Widows, null)
+            : new BlockFrame(
+                row.Element.LocalName,
+                x,
+                width,
+                row.Style.Border,
+                default,
+                row.Style.Background,
+                row.Style.BreakBefore,
+                row.Style.BreakAfter,
+                row.Style.AvoidsBreakInside,
+                row.Style.Orphans,
+                row.Style.Widows,
+                null,
+                row.Style.BorderRadius);
 
         var stretched = cells
             .Select(cell => Stretched(cell.Block, Spanned(heights, index, cell.Cell.Down), cell.Cell.Style.VerticalAlign, cell.Above))
@@ -427,6 +429,15 @@ internal sealed class Tables(Galley galley)
                 continue;
             }
 
+            if (IsCell(child))
+            {
+                List<DeclaredCell> strays = Strays(children, ref index, style);
+
+                (isFooter ? foot : rows).Add(
+                    new DeclaredRow(null, style, isHeader || IsHeading(strays), isContinued, strays));
+                continue;
+            }
+
             if (Galley.IsTag(child, "thead") || Galley.IsTag(child, "tbody") || Galley.IsTag(child, "tfoot"))
             {
                 Collect(
@@ -441,6 +452,42 @@ internal sealed class Tables(Galley galley)
         }
     }
 
+    /// <summary>
+    /// Cells standing straight in a table or a row group, from the one at <paramref name="index"/> up to the next node
+    /// that is neither a cell nor white space: one row with no box of its own, as CSS makes of them. The HTML parser
+    /// wraps such cells in a row itself, but past the depth AngleSharp 1.9 bounds a tree at it puts them there, and the
+    /// words they held were lost. <paramref name="index"/> is left on the last cell taken.
+    /// </summary>
+    private List<DeclaredCell> Strays(INodeList children, ref int index, Style style)
+    {
+        List<DeclaredCell> cells = [];
+
+        for (int at = index; at < children.Length; at++)
+        {
+            if (children[at] is IText { Text: var text } && string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            if (children[at] is not IElement child || !IsCell(child))
+            {
+                break;
+            }
+
+            index = at;
+            Style computed = galley.Compute(child, style);
+
+            if (computed.Display != Display.None)
+            {
+                cells.Add(new DeclaredCell(child, computed, SpanOf(child, "colspan"), SpanOf(child, "rowspan")));
+            }
+        }
+
+        return cells;
+    }
+
+    private static bool IsCell(IElement element) => Galley.IsTag(element, "td") || Galley.IsTag(element, "th");
+
     private List<DeclaredCell> Cells(IElement row, Style style)
     {
         List<DeclaredCell> cells = [];
@@ -449,7 +496,7 @@ internal sealed class Tables(Galley galley)
 
         for (int index = 0; index < children.Length; index++)
         {
-            if (children[index] is not IElement child || (!Galley.IsTag(child, "td") && !Galley.IsTag(child, "th")))
+            if (children[index] is not IElement child || !IsCell(child))
             {
                 continue;
             }
@@ -593,9 +640,12 @@ internal sealed class Tables(Galley galley)
     /// <summary>One row of the grid: where its cells sit, and whether a cell from above reaches into it.</summary>
     private sealed record Band(IReadOnlyList<Placement> Cells, bool IsTied);
 
-    /// <summary>One row as the markup declared it, with its cells and whether it heads or continues the table.</summary>
+    /// <summary>
+    /// One row as the markup declared it, with its cells and whether it heads or continues the table; no element for
+    /// the row CSS makes of cells standing straight in a table, which draws no box of its own.
+    /// </summary>
     private sealed record DeclaredRow(
-        IElement Element,
+        IElement? Element,
         Style Style,
         bool IsHeader,
         bool IsContinued,

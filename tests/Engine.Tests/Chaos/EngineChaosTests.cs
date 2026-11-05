@@ -154,7 +154,6 @@ public sealed class EngineChaosTests
     [Theory]
     [InlineData("<div>", 20_000)]
     [InlineData("<span>", 20_000)]
-    [InlineData("<table><tr><td>", 3_000)]
     public async Task DeeplyNestedElements_AreSetWithTheirTextAndANote(string open, int depth)
     {
         string html = string.Concat(Enumerable.Repeat(open, depth)) + "deepest";
@@ -162,6 +161,21 @@ public sealed class EngineChaosTests
         Composition composition = await Task.Run(() => Typeset.Html(html));
 
         Assert.Contains(composition.Notes, note => note.Kind == NoteKind.NestingCapped);
+        Assert.Contains(composition.Pages.SelectMany(page => page.Spans), span => span.Text.Contains("deepest", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Three thousand nested tables are set with their words. From AngleSharp 1.9 the parser bounds the tree itself, as a
+    /// browser does: the tables come out some five hundred nodes deep rather than twelve thousand, under the cap, so the
+    /// layout follows them all and no note is due.
+    /// </summary>
+    [Fact]
+    public async Task DeeplyNestedTables_AreSetWithTheirText()
+    {
+        string html = string.Concat(Enumerable.Repeat("<table><tr><td>", 3_000)) + "deepest";
+
+        Composition composition = await Task.Run(() => Typeset.Html(html));
+
         Assert.Contains(composition.Pages.SelectMany(page => page.Spans), span => span.Text.Contains("deepest", StringComparison.Ordinal));
     }
 
